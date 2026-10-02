@@ -69,9 +69,12 @@ def test_due_and_under_max_attempts_nags_the_recipient_and_reschedules(db_path, 
     assert "שיעורי בית" in kwargs["body"]
     assert 'תגיד לי "עשיתי"' in kwargs["body"]  # the fixed confirmation instruction is always appended
 
-    # rescheduled ~5 minutes out, not due right now anymore
-    assert get_due_persistent_reminders(NOW.isoformat()) == []
-    assert len(get_due_persistent_reminders((NOW + timedelta(minutes=6)).isoformat())) == 1
+    # rescheduled ~5 minutes out, not due right now anymore. Measured from when this
+    # test actually ran, not from module import (NOW) - on a slow full-suite run the two
+    # can be more than a minute apart, which made this assertion fail intermittently.
+    run_now = datetime.now(ZoneInfo("UTC"))
+    assert get_due_persistent_reminders(run_now.isoformat()) == []
+    assert len(get_due_persistent_reminders((run_now + timedelta(minutes=6)).isoformat())) == 1
 
 
 def test_nag_goes_through_the_24h_window_template_fallback(db_path, make_user):
