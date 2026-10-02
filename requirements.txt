@@ -12,7 +12,7 @@ google-auth-oauthlib==1.2.1
 google-api-python-client==2.147.0
 
 # Real Google Cloud billing costs, via the BigQuery billing export (2026-09-14)
-google-cloud-bigquery==3.45.0
+google-cloud-bigquery==3.45.2
 
 # DB
 # (sqlite3 is built into Python - no package needed)
