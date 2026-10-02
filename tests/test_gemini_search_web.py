@@ -110,3 +110,15 @@ def test_search_web_caps_sources_at_five(monkeypatch):
 
     result = gemini.search_web("anything")
     assert len(result["sources"]) == 5
+
+
+def test_search_web_asks_for_a_hebrew_answer(monkeypatch):
+    """The classifier may hand over an English-rephrased query; without this the
+    grounded answer came back in English to a Hebrew question (seen live)."""
+    fake_client = MagicMock()
+    fake_client.models.generate_content.return_value = _FakeResponse("answer")
+    monkeypatch.setattr(gemini, "_get_client", lambda: fake_client)
+
+    gemini.search_web("height of the Eiffel Tower")
+
+    assert "Hebrew" in fake_client.models.generate_content.call_args.kwargs["config"].system_instruction

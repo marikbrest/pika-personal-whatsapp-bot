@@ -168,6 +168,9 @@ def search_web(query: str) -> dict | None:
             contents=query,
             config=types.GenerateContentConfig(
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+                # The classifier may rephrase the query in English; the reply
+                # still has to come back in the user's language.
+                system_instruction="Answer in Hebrew, concisely, as a WhatsApp message.",
                 tools=[types.Tool(google_search=types.GoogleSearch())],
                 thinking_config=types.ThinkingConfig(thinking_level="low"),
                 max_output_tokens=2048,

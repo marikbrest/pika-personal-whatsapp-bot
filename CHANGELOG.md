@@ -11,6 +11,9 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 ### Fixed
 - Adding a contact crashed with a generic error reply, and `web_search`/`connect_google` ran twice (a second
   search, a second OAuth link): these tool names match old intent names, so the legacy dispatch re-ran them.
+- Without `GOOGLE_CLIENT_ID`/`SECRET`, Google requests (connect, calendar, Drive, Gmail) replied with a generic
+  error; they now say Google is not configured yet.
+- Web search could answer a Hebrew question in English (the classifier may rephrase the query in English).
 - A persistent-reminder test measured its reschedule from module import time and failed intermittently on slow runs.
 
 ### Changed

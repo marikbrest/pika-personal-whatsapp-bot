@@ -139,10 +139,15 @@ def _client_config() -> dict:
     }
 
 
+class GoogleNotConfiguredError(RuntimeError):
+    """This install has no Google OAuth client - Google features cannot work at all
+    (not a per-user "not connected" state). Caught in tools.dispatch."""
+
+
 def build_auth_url(user_id: int) -> str:
     """Builds a Google OAuth link for a specific user, with encrypted, signed state."""
     if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-        raise RuntimeError("GOOGLE_CLIENT_ID/SECRET are missing from .env")
+        raise GoogleNotConfiguredError("GOOGLE_CLIENT_ID/SECRET are missing from .env")
 
     state = _fernet().encrypt(json.dumps({"user_id": user_id}).encode()).decode()
 
