@@ -25,7 +25,7 @@ python-dotenv==1.2.3
 
 # Encryption (oauth tokens at rest - PRD 12.4)
 # Verifying Cloudflare Access JWTs for the admin dashboard
-PyJWT==2.10.1
+PyJWT==2.15.1
 cryptography==50.0.2
 python-multipart==0.0.32
 
