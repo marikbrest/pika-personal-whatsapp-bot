@@ -9,6 +9,8 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 - CI tests Python 3.12, 3.13 and 3.14; the README now states 3.12+.
 
 ### Fixed
+- Adding a contact crashed with a generic error reply, and `web_search`/`connect_google` ran twice (a second
+  search, a second OAuth link): these tool names match old intent names, so the legacy dispatch re-ran them.
 - A persistent-reminder test measured its reschedule from module import time and failed intermittently on slow runs.
 
 ### Changed

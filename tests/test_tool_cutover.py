@@ -31,7 +31,10 @@ def test_pilot_tool_match_executes_the_real_tool_and_skips_the_old_classifier():
 
     mock_old_classifier.assert_not_called()
     mock_execute.assert_called_once()
-    assert result == {"intent": "get_weather", "get_weather": {"day_offset": 0}, "reply": "18 degrees and sunny"}
+    assert result == {
+        "intent": "get_weather", "get_weather": {"day_offset": 0}, "reply": "18 degrees and sunny",
+        "tool_executed": True,
+    }
 
 
 def test_chat_result_falls_back_to_the_old_classifier():

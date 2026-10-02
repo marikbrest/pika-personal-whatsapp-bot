@@ -476,7 +476,10 @@ def _classify_text_with_cutover(
             tool = next((t for t in tools if t.name == tool_name), None)
             if tool is not None:
                 reply = execute_tool(tool, user, args)
-                return {"intent": tool_name, tool_name: args, "reply": reply}
+                # tool_executed: the tool already ran above - the legacy action
+                # dispatch below must not run it a second time (several tool names,
+                # e.g. add_contact/web_search/connect_google, match old intent names).
+                return {"intent": tool_name, tool_name: args, "reply": reply, "tool_executed": True}
 
     return parse_message(
         text_body, timezone_name=user["timezone"], history=history, contacts=contacts,
@@ -1720,7 +1723,10 @@ def _process_single_message(message: dict) -> None:
                 print(f"[webhook] could not save pending feature-request suggestion (non-fatal): {e}")
 
         with _timed(timings, "action"):
-            if result["intent"] == "reminder":
+            if result.get("tool_executed"):
+                pass  # already handled by the tools pipeline - reply is final
+
+            elif result["intent"] == "reminder":
                 result = {**result, "reply": _handle_reminder(user, result["reminder"], result["reply"])}
 
             elif result["intent"] == "add_contact":
