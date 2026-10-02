@@ -1,0 +1,12 @@
+.git
+.github
+.env
+data
+logs
+backups
+tests
+design
+venv
+.venv
+__pycache__
+*.db

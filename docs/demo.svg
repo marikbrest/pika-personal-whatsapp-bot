@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="836" viewBox="0 0 800 836" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15">
+<style>
+.r{opacity:0}
+@keyframes k0{0%,3.41%{opacity:0}4.01%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r0{animation:k0 17.6s infinite}
+@keyframes k1{0%,9.66%{opacity:0}10.26%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r1{animation:k1 17.6s infinite}
+@keyframes k2{0%,10.51%{opacity:0}11.11%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r2{animation:k2 17.6s infinite}
+@keyframes k3{0%,11.36%{opacity:0}11.96%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r3{animation:k3 17.6s infinite}
+@keyframes k4{0%,12.22%{opacity:0}12.82%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r4{animation:k4 17.6s infinite}
+@keyframes k5{0%,9.66%{opacity:0}10.26%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r5{animation:k5 17.6s infinite}
+@keyframes k6{0%,19.32%{opacity:0}19.92%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r6{animation:k6 17.6s infinite}
+@keyframes k7{0%,25.57%{opacity:0}26.17%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r7{animation:k7 17.6s infinite}
+@keyframes k8{0%,26.42%{opacity:0}27.02%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r8{animation:k8 17.6s infinite}
+@keyframes k9{0%,27.27%{opacity:0}27.87%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r9{animation:k9 17.6s infinite}
+@keyframes k10{0%,28.13%{opacity:0}28.73%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r10{animation:k10 17.6s infinite}
+@keyframes k11{0%,25.57%{opacity:0}26.17%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r11{animation:k11 17.6s infinite}
+@keyframes k12{0%,35.23%{opacity:0}35.83%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r12{animation:k12 17.6s infinite}
+@keyframes k13{0%,41.48%{opacity:0}42.08%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r13{animation:k13 17.6s infinite}
+@keyframes k14{0%,42.33%{opacity:0}42.93%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r14{animation:k14 17.6s infinite}
+@keyframes k15{0%,43.18%{opacity:0}43.78%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r15{animation:k15 17.6s infinite}
+@keyframes k16{0%,44.03%{opacity:0}44.63%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r16{animation:k16 17.6s infinite}
+@keyframes k17{0%,41.48%{opacity:0}42.08%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r17{animation:k17 17.6s infinite}
+@keyframes k18{0%,51.14%{opacity:0}51.74%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r18{animation:k18 17.6s infinite}
+@keyframes k19{0%,57.39%{opacity:0}57.99%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r19{animation:k19 17.6s infinite}
+@keyframes k20{0%,58.24%{opacity:0}58.84%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r20{animation:k20 17.6s infinite}
+@keyframes k21{0%,59.09%{opacity:0}59.69%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r21{animation:k21 17.6s infinite}
+@keyframes k22{0%,59.94%{opacity:0}60.54%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r22{animation:k22 17.6s infinite}
+@keyframes k23{0%,57.39%{opacity:0}57.99%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r23{animation:k23 17.6s infinite}
+@keyframes k24{0%,67.05%{opacity:0}67.65%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r24{animation:k24 17.6s infinite}
+@keyframes k25{0%,73.30%{opacity:0}73.90%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r25{animation:k25 17.6s infinite}
+@keyframes k26{0%,74.15%{opacity:0}74.75%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r26{animation:k26 17.6s infinite}
+@keyframes k27{0%,75.00%{opacity:0}75.60%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r27{animation:k27 17.6s infinite}
+@keyframes k28{0%,75.85%{opacity:0}76.45%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r28{animation:k28 17.6s infinite}
+@keyframes k29{0%,76.70%{opacity:0}77.30%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r29{animation:k29 17.6s infinite}
+@keyframes k30{0%,73.30%{opacity:0}73.90%,93.18%{opacity:1}96.18%,100%{opacity:0}} .r30{animation:k30 17.6s infinite}
+@media (prefers-reduced-motion: reduce){.r{animation:none !important;opacity:1}}
+</style>
+<rect width="800" height="836" rx="12" fill="#1a1b26"/>
+<rect width="800" height="38" rx="12" fill="#24283b"/><rect y="20" width="800" height="18" fill="#24283b"/>
+<circle cx="22" cy="19" r="6" fill="#ff5f56"/><circle cx="42" cy="19" r="6" fill="#ffbd2e"/><circle cx="62" cy="19" r="6" fill="#27c93f"/>
+<text x="400.0" y="24" text-anchor="middle" fill="#7a82a8" font-size="13">python scripts/chat.py</text>
+<text class="r r0" x="28" y="72" fill="#9ece6a">you&gt; remind me tomorrow at 9 to call the doctor</text>
+<text class="r r1" x="28" y="96" fill="#7aa2f7">pika&gt;</text>
+<text class="r r2" x="52" y="120" fill="#e0e0e0">I&#x27;ve set a reminder for you tomorrow at 09:00</text>
+<text class="r r3" x="52" y="144" fill="#e0e0e0">to call the doctor.</text>
+<text class="r r4" x="28" y="168" fill="#6b7089">↳ reacted ⏰</text>
+<text class="r r6" x="28" y="216" fill="#9ece6a">you&gt; add milk, eggs and bread to my shopping list</text>
+<text class="r r7" x="28" y="240" fill="#7aa2f7">pika&gt;</text>
+<text class="r r8" x="760" y="264" direction="rtl" unicode-bidi="plaintext" text-anchor="start" fill="#e0e0e0">✅ נוסף לshopping: milk, eggs and bread</text>
+<text class="r r9" x="760" y="288" direction="rtl" unicode-bidi="plaintext" text-anchor="start" fill="#e0e0e0">(1 פריטים)</text>
+<text class="r r10" x="28" y="312" fill="#6b7089">↳ reacted 🛒</text>
+<text class="r r12" x="28" y="360" fill="#9ece6a">you&gt; what&#x27;s on my shopping list?</text>
+<text class="r r13" x="28" y="384" fill="#7aa2f7">pika&gt;</text>
+<text class="r r14" x="52" y="408" fill="#e0e0e0">📋 shopping:</text>
+<text class="r r15" x="52" y="432" fill="#e0e0e0">• milk, eggs and bread</text>
+<text class="r r16" x="28" y="456" fill="#6b7089">↳ reacted 🛒</text>
+<text class="r r18" x="28" y="504" fill="#9ece6a">you&gt; what&#x27;s the weather in Paris tomorrow?</text>
+<text class="r r19" x="28" y="528" fill="#7aa2f7">pika&gt;</text>
+<text class="r r20" x="760" y="552" direction="rtl" unicode-bidi="plaintext" text-anchor="start" fill="#e0e0e0">🌤️ תחזית לפריז — יום שבת (03/10):</text>
+<text class="r r21" x="760" y="576" direction="rtl" unicode-bidi="plaintext" text-anchor="start" fill="#e0e0e0">מעונן, 12-22°C, 28% סיכוי גשם</text>
+<text class="r r22" x="28" y="600" fill="#6b7089">↳ reacted 🌤️</text>
+<text class="r r24" x="28" y="648" fill="#9ece6a">you&gt; what can you do?</text>
+<text class="r r25" x="28" y="672" fill="#7aa2f7">pika&gt;</text>
+<text class="r r26" x="760" y="696" direction="rtl" unicode-bidi="plaintext" text-anchor="start" fill="#e0e0e0">הנה מה שאני יודע לעשות:</text>
+<text class="r r27" x="760" y="720" direction="rtl" unicode-bidi="plaintext" text-anchor="start" fill="#e0e0e0">📅 יומן ותזכורות   📧 מייל</text>
+<text class="r r28" x="760" y="744" direction="rtl" unicode-bidi="plaintext" text-anchor="start" fill="#e0e0e0">🛒 רשימות וזיכרון   🌐 מזג אוויר, מניות, חיפוש</text>
+<text class="r r29" x="760" y="768" direction="rtl" unicode-bidi="plaintext" text-anchor="start" fill="#e0e0e0">🎨 תמונות   🔔 עדכונים יזומים   🔒 פרטיות   …</text>
+</svg>

@@ -1,0 +1,33 @@
+# WhatsApp / Web server
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+httpx==0.28.1
+
+# Gemini (official SDK, replaces deprecated google-generativeai)
+google-genai==2.25.0
+
+# Google APIs (Calendar, Gmail)
+google-auth==2.56.2
+google-auth-oauthlib==1.2.1
+google-api-python-client==2.147.0
+
+# Real Google Cloud billing costs, via the BigQuery billing export (2026-09-14)
+google-cloud-bigquery==3.45.0
+
+# DB
+# (sqlite3 is built into Python - no package needed)
+
+# Scheduling
+apscheduler==3.11.3
+
+# Env vars
+python-dotenv==1.2.3
+
+# Encryption (oauth tokens at rest - PRD 12.4)
+# Verifying Cloudflare Access JWTs for the admin dashboard
+PyJWT==2.10.1
+cryptography==50.0.2
+python-multipart==0.0.32
+
+# Content extraction (saved links)
+trafilatura==2.2.0

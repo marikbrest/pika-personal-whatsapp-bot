@@ -1,0 +1,8 @@
+# Test-only dependencies. Kept separate from requirements.txt so the
+# production install never pulls in test
+# tooling it doesn't need - `pip install -r requirements-dev.txt` covers
+# both files via the -r line below.
+-r requirements.txt
+
+pytest==9.1.1
+ruff==0.16.10

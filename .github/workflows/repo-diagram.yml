@@ -1,0 +1,32 @@
+name: Repo Diagram
+
+# Regenerates a file-tree diagram of the repo (design/repo-diagram.svg) on
+# every push to main, via repo-visualizer. Separate from tests.yml (that
+# one gates correctness; this one is purely cosmetic/documentation and
+# should never block a merge or a deploy).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-diagram:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Generate diagram
+        uses: githubocto/repo-visualizer@main
+        with:
+          output_file: design/repo-diagram.svg
+          excluded_paths: "venv,node_modules,.git,__pycache__,logs,data,backups,.pytest_cache"
+          should_push: false
+
+      - name: Commit updated diagram
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: update repo diagram"
+          file_pattern: design/repo-diagram.svg
