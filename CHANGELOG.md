@@ -7,8 +7,8 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 ### Security
 - Admin dashboard fails closed: it is off until `ADMIN_ALLOWED_EMAIL` is set (previously an empty value let any
   Cloudflare Access identity in).
-- Optional verification of the signed Cloudflare Access JWT (`CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`), so a forged
-  `Cf-Access-Authenticated-User-Email` header no longer grants access.
+- Optional verification of the signed Cloudflare Access JWT (`CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, PyJWT 2.15.1),
+  so a forged `Cf-Access-Authenticated-User-Email` header no longer grants access.
 
 ### Added
 - `DEFAULT_TIMEZONE` and `DEFAULT_LOCATION` settings for deployments outside Israel; `doctor.py` checks them and the
