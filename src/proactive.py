@@ -26,7 +26,7 @@ later stage once a real queue is worth building.
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from src.config import DEFAULT_TIMEZONE
+from src.config import DEFAULT_TIMEZONE, WHATSAPP_TEMPLATE_LANGUAGE
 from src.db.models import (
     count_todays_proactive_notifications,
     defer_proactive_message,
@@ -42,7 +42,7 @@ _DEFERRABLE_REASONS = ("quiet_hours", "status_busy")
 # message falls back to outside the 24h window. Submitted to Meta the same
 # day (Utility category, single body param wrapping the full message text).
 _PROACTIVE_TEMPLATE_NAME = "proactive_update"
-_PROACTIVE_TEMPLATE_LANGUAGE_CODE = "he"
+_PROACTIVE_TEMPLATE_LANGUAGE_CODE = WHATSAPP_TEMPLATE_LANGUAGE
 
 
 def _parse_hhmm(value: str) -> time:

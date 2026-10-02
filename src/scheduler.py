@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from src.config import DEFAULT_TIMEZONE
+from src.config import DEFAULT_TIMEZONE, WHATSAPP_TEMPLATE_LANGUAGE
 
 _WEEKDAY_NAMES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 _HEBREW_DAY_NAMES = {
@@ -24,7 +24,7 @@ _HEBREW_DAY_NAMES = {
 # WhatsApp Manager (reminder_notification, package_status_update,
 # google_reconnect_needed) - must match what each template was approved
 # under, not just "Hebrew" as shown in the UI.
-_TEMPLATE_LANGUAGE_CODE = "he"
+_TEMPLATE_LANGUAGE_CODE = WHATSAPP_TEMPLATE_LANGUAGE
 
 # Default per-user daily-meetings-summary send time (a user can set their
 # own via manage_daily_meetings_summary - see src/tools/batch13.py; this is

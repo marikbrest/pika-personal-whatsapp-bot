@@ -2,6 +2,18 @@
 
 All notable changes to this project. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.1] - 2026-10-02
+
+### Added
+- `WHATSAPP_TEMPLATE_LANGUAGE` setting (was a hardcoded `he` in two places).
+- CI tests Python 3.12, 3.13 and 3.14; the README now states 3.12+.
+
+### Fixed
+- A persistent-reminder test measured its reschedule from module import time and failed intermittently on slow runs.
+
+### Changed
+- Dependabot updates: fastapi 0.142, uvicorn 0.54, google-auth 2.59, google-cloud-bigquery 3.45.2, GitHub Actions.
+
 ## [0.3.0] - 2026-10-02
 
 ### Security

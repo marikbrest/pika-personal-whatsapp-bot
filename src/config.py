@@ -19,6 +19,8 @@ DB_PATH = os.getenv("DB_PATH", "./data/assistant.db")
 # someone asks for the weather without naming one.
 DEFAULT_TIMEZONE = os.getenv("DEFAULT_TIMEZONE", "Asia/Jerusalem")
 DEFAULT_LOCATION = os.getenv("DEFAULT_LOCATION", "Tel Aviv")
+# Language code your WhatsApp message templates were approved in (e.g. "he", "en", "en_US").
+WHATSAPP_TEMPLATE_LANGUAGE = os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "he")
 ADMIN_HOST = os.getenv("ADMIN_HOST", "admin.your-domain.example")
 ADMIN_ALLOWED_EMAIL = os.getenv("ADMIN_ALLOWED_EMAIL", "")
 # Optional but recommended: verify the signed Cloudflare Access JWT instead of trusting the

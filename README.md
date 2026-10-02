@@ -65,7 +65,7 @@ Everything is covered by 900+ tests that run with no credentials or network.
 
 | Requirement | Notes |
 | --- | --- |
-| Python 3.14 (what CI and the author run) | any OS; Windows scripts are provided, Linux/macOS notes below |
+| Python 3.12+ (CI tests 3.12, 3.13 and 3.14) | any OS; Windows scripts are provided, Linux/macOS notes below |
 | A WhatsApp Business Cloud API app | free Meta developer account; a test number works to start |
 | A Gemini API key | [Google AI Studio](https://aistudio.google.com/) |
 | A Google Cloud OAuth client | only for Calendar/Gmail/Drive features |
@@ -209,9 +209,8 @@ to `http://bot:8000`, and run `docker compose --profile tunnel up -d`.
 
 WhatsApp only lets a business message someone first (reminders, alerts, proactive
 updates) with a **pre-approved template** once the user's 24-hour chat window has closed.
-Create these in WhatsApp Manager (category *Utility*, any language; the bot sends them in
-Hebrew `he` by default — change `_TEMPLATE_LANGUAGE_CODE` in `src/scheduler.py` and
-`src/proactive.py` if yours differs). Wording is yours; only the **number of `{{n}}`
+Create these in WhatsApp Manager (category *Utility*, any language; set
+`WHATSAPP_TEMPLATE_LANGUAGE` in `.env` to the language you created them in, default `he`). Wording is yours; only the **number of `{{n}}`
 parameters** must match:
 
 | Template name | Parameters | Used for |
@@ -368,7 +367,7 @@ and have [rclone](https://rclone.org/) installed.
 Also back up your `.env`, in particular `TOKEN_ENCRYPTION_KEY` — without it, stored Google
 tokens in a restored database cannot be decrypted (users just reconnect Google).
 
-## Features
+## Feature details
 
 ### Reminders
 
@@ -540,7 +539,9 @@ A few small, genuinely family-specific spots are meant to be edited, not auto-de
   for your own parent accounts with a one-off `UPDATE users SET ... WHERE
   whatsapp_number = '...'` after your first users are registered.
 - `ADMIN_CONTACT_EMAIL` in `.env` — shown on the `/about` and `/privacy` pages Google's
-  OAuth consent screen requires (see "Quick setup" below for why those exist).
+  OAuth consent screen requires (see the Google OAuth gotcha in "Quick setup" above).
+- Regional settings in `.env` if you are not in Israel: `DEFAULT_TIMEZONE`,
+  `DEFAULT_LOCATION` (weather default) and `WHATSAPP_TEMPLATE_LANGUAGE`.
 
 ## License
 
