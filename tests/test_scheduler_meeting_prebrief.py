@@ -5,6 +5,7 @@ correctness covered elsewhere - returning None here exercises the plain
 fallback path, avoiding a real Gemini call). Real DB fixtures for
 proactive_settings/meeting_prebrief_sent state.
 """
+import pytest
 from unittest.mock import patch
 
 from src.db.models import (
@@ -13,6 +14,9 @@ from src.db.models import (
     set_proactive_meeting_lead_time,
 )
 from src.scheduler import check_and_send_meeting_prebriefs
+
+# Proactive delivery is quiet-hours-gated; never depend on the real time of day.
+pytestmark = pytest.mark.usefixtures("daytime_clock")
 
 
 def _event(event_id, summary, start, end, location=None):

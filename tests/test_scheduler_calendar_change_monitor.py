@@ -10,6 +10,7 @@ tests exercise this collector's own message text without making a real
 (and non-deterministic) Gemini call. Uses real DB fixtures for
 settings/snapshot state.
 """
+import pytest
 from unittest.mock import patch
 
 from src.db.models import (
@@ -17,6 +18,9 @@ from src.db.models import (
     set_proactive_enabled,
 )
 from src.scheduler import check_and_monitor_calendar_changes
+
+# Proactive delivery is quiet-hours-gated; never depend on the real time of day.
+pytestmark = pytest.mark.usefixtures("daytime_clock")
 
 
 def _event(event_id, summary, start, end):

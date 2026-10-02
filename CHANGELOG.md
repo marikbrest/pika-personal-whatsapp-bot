@@ -18,6 +18,8 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 - Dependency updates from Dependabot (google-genai 2.25, apscheduler 3.11, GitHub Actions majors).
 - Gemini calls explicitly disable the SDK's automatic function calling (the bot dispatches tools itself), which
   also silences a confusing warning google-genai 2.x prints otherwise.
+- Proactive-delivery tests pin the clock; previously ten of them failed whenever the suite ran during the
+  default quiet hours (22:30-07:00 Israel time).
 - README is explicit that Pika is Hebrew-first (understands English; code-composed replies are Hebrew).
 
 ## [0.2.2] - 2026-10-02

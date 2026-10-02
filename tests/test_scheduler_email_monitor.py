@@ -8,10 +8,14 @@ assess_and_deliver fall back to this collector's own plain factual
 message, avoiding a real (non-deterministic) Gemini call in these tests.
 Real DB fixtures for proactive_settings/gmail_seen_messages state.
 """
+import pytest
 from unittest.mock import patch
 
 from src.db.models import get_connection, set_proactive_enabled
 from src.scheduler import check_and_monitor_new_emails
+
+# Proactive delivery is quiet-hours-gated; never depend on the real time of day.
+pytestmark = pytest.mark.usefixtures("daytime_clock")
 
 
 def _email(id_, from_="parent@gan.example.com", subject="עדכון", snippet="תקציר"):

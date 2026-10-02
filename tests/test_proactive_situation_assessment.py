@@ -5,10 +5,14 @@ wasn't actually implemented yet - the collectors only had rule-based
 detection + a fixed category-to-interrupt mapping). Mocks call_gemini_json
 directly (Gemini integration correctness proven elsewhere).
 """
+import pytest
 from unittest.mock import patch
 
 from src.db.models import set_proactive_enabled
 from src.proactive import assess_and_deliver, assess_situation
+
+# Proactive delivery is quiet-hours-gated; never depend on the real time of day.
+pytestmark = pytest.mark.usefixtures("daytime_clock")
 
 
 def _user(user_id=1):

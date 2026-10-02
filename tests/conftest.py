@@ -235,3 +235,26 @@ def post_webhook(client: TestClient, payload: dict) -> Any:
         content=raw_body,
         headers={"Content-Type": "application/json", "X-Hub-Signature-256": sign_payload(raw_body)},
     )
+
+
+@pytest.fixture()
+def daytime_clock(monkeypatch):
+    """
+    Pins src.proactive's clock to 12:00 Israel time today. Proactive delivery is blocked
+    during quiet hours (default 22:30-07:00), so any test that expects a message to go out
+    must not depend on the wall-clock time it happens to run at - without this the suite
+    failed every night.
+    """
+    from datetime import datetime as _datetime
+    from zoneinfo import ZoneInfo
+
+    import src.proactive as proactive
+
+    noon = _datetime.now(ZoneInfo("Asia/Jerusalem")).replace(hour=12, minute=0, second=0, microsecond=0)
+
+    class _Clock(_datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return noon.astimezone(tz) if tz else noon.replace(tzinfo=None)
+
+    monkeypatch.setattr(proactive, "datetime", _Clock)
