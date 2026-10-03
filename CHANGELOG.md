@@ -2,7 +2,7 @@
 
 All notable changes to this project. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.3.1] - 2026-10-02
+## [0.3.1] - 2026-10-03
 
 ### Added
 - `WHATSAPP_TEMPLATE_LANGUAGE` setting (was a hardcoded `he` in two places).
