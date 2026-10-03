@@ -2,7 +2,7 @@
 
 All notable changes to this project. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.3.5] - 2026-10-03
 
 ### Added
 - `CLAUDE.md`: tells Claude Code (or any coding agent) exactly how to install, validate, run and change the project. ([README](./README.md))
