@@ -4,12 +4,20 @@ See PRD.md section 12.3 - WAL mode + busy_timeout to avoid "SQLite locked"
 when the webhook handler and the scheduler read/write concurrently.
 """
 import sqlite3
+from datetime import datetime
 import threading
 from pathlib import Path
 
 from src.config import DEFAULT_TIMEZONE, DB_PATH
 
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
+
+
+def _inserted_id(cur: sqlite3.Cursor) -> int:
+    """cursor.lastrowid is typed Optional; after a successful INSERT it is always set."""
+    if cur.lastrowid is None:
+        raise RuntimeError("INSERT did not return a row id")
+    return cur.lastrowid
 
 
 def get_connection() -> sqlite3.Connection:
@@ -579,7 +587,7 @@ def _run_migrations(conn: sqlite3.Connection) -> None:
         conn.commit()
 
 
-def get_user_by_whatsapp_number(whatsapp_number: str):
+def get_user_by_whatsapp_number(whatsapp_number: str) -> sqlite3.Row | None:
     """
     Looks up an existing user by WhatsApp number.
     PRD 14.2 - allowlist: users are never created automatically. An unknown
@@ -595,7 +603,7 @@ def get_user_by_whatsapp_number(whatsapp_number: str):
         conn.close()
 
 
-def get_user_by_id(user_id: int):
+def get_user_by_id(user_id: int) -> sqlite3.Row | None:
     """Looks up a user by id - used when arriving from an OAuth callback state
     rather than from a WhatsApp number."""
     conn = get_connection()
@@ -718,7 +726,7 @@ def save_outgoing_message(user_id: int, raw_content: str) -> None:
         conn.close()
 
 
-def get_recent_messages(user_id: int, limit: int = 10, within_hours: int = 24):
+def get_recent_messages(user_id: int, limit: int = 10, within_hours: int = 24) -> list[sqlite3.Row]:
     """
     Returns the most recent messages in the conversation (both directions),
     oldest first, to be fed to Gemini as context.
@@ -836,12 +844,12 @@ def save_contact(owner_user_id: int, name: str, whatsapp_number: str) -> int:
             (owner_user_id, name, whatsapp_number),
         )
         conn.commit()
-        return cur.lastrowid
+        return _inserted_id(cur)
     finally:
         conn.close()
 
 
-def get_contact_by_name(owner_user_id: int, name: str):
+def get_contact_by_name(owner_user_id: int, name: str) -> sqlite3.Row | None:
     """Looks up a contact by name (case-insensitive), for family reminders."""
     conn = get_connection()
     try:
@@ -854,7 +862,7 @@ def get_contact_by_name(owner_user_id: int, name: str):
         conn.close()
 
 
-def list_contacts(owner_user_id: int):
+def list_contacts(owner_user_id: int) -> list[sqlite3.Row]:
     """All of the user's contacts - fed into the prompt so Gemini can match names."""
     conn = get_connection()
     try:
@@ -873,7 +881,7 @@ def save_reminder(
     schedule_type: str,
     schedule_time: str,
     schedule_days: str | None,
-    next_trigger_at,  # datetime, already computed by src.scheduler.compute_next_trigger
+    next_trigger_at: datetime,  # already computed by src.scheduler.compute_next_trigger
     recipient_contact_id: int | None = None,
 ) -> int:
     """
@@ -896,12 +904,12 @@ def save_reminder(
             ),
         )
         conn.commit()
-        return cur.lastrowid
+        return _inserted_id(cur)
     finally:
         conn.close()
 
 
-def get_due_reminders(now_utc_iso: str):
+def get_due_reminders(now_utc_iso: str) -> list[sqlite3.Row]:
     """
     Returns every active reminder that is due (next_trigger_at <= now).
 
@@ -934,7 +942,7 @@ def get_due_reminders(now_utc_iso: str):
         conn.close()
 
 
-def list_active_reminders(user_id: int):
+def list_active_reminders(user_id: int) -> list[sqlite3.Row]:
     """
     All of the user's active reminders (including ones they created for
     contacts), ordered by next_trigger_at. Backs both the "what do I have
@@ -984,7 +992,7 @@ def deactivate_reminder(reminder_id: int, user_id: int | None = None) -> bool:
         conn.close()
 
 
-def update_reminder_next_trigger(reminder_id: int, next_trigger_at) -> None:
+def update_reminder_next_trigger(reminder_id: int, next_trigger_at: datetime) -> None:
     """Updates next_trigger_at for a recurring reminder (daily/weekly) after it was sent."""
     conn = get_connection()
     try:
@@ -1003,7 +1011,7 @@ def upsert_oauth_tokens(
     access_token_encrypted: str,
     refresh_token_encrypted: str,
     scope: str,
-    expires_at,  # datetime | None
+    expires_at: datetime | None,
 ) -> None:
     """
     Saves or updates OAuth tokens (Google etc.) for a user+provider. There is
@@ -1042,7 +1050,7 @@ def upsert_oauth_tokens(
         conn.close()
 
 
-def get_oauth_tokens(user_id: int, provider: str):
+def get_oauth_tokens(user_id: int, provider: str) -> sqlite3.Row | None:
     """Returns the encrypted token row for a user+provider, or None if not connected yet."""
     conn = get_connection()
     try:
@@ -1067,12 +1075,12 @@ def save_email_draft(user_id: int, to_address: str, subject: str, body: str) -> 
             (user_id, to_address, subject, body),
         )
         conn.commit()
-        return cur.lastrowid
+        return _inserted_id(cur)
     finally:
         conn.close()
 
 
-def get_pending_draft(user_id: int):
+def get_pending_draft(user_id: int) -> sqlite3.Row | None:
     """
     Returns the user's most recent email draft awaiting approval, if any.
     There is at most one "active" draft at a time - a new draft is not created
@@ -1147,7 +1155,7 @@ def save_pending_suggestion(
             (user_id, tool_name, args_json, confirmation_text, source_content),
         )
         conn.commit()
-        return cur.lastrowid
+        return _inserted_id(cur)
     finally:
         conn.close()
 
@@ -1155,7 +1163,7 @@ def save_pending_suggestion(
 PENDING_SUGGESTION_TTL_HOURS = 2
 
 
-def get_pending_suggestion(user_id: int):
+def get_pending_suggestion(user_id: int) -> sqlite3.Row | None:
     """
     Returns the user's most recent suggestion awaiting confirmation, if any -
     unless it is older than PENDING_SUGGESTION_TTL_HOURS, in which case it is
@@ -1230,7 +1238,7 @@ def save_pending_image_upload(user_id: int, media_id: str, mime_type: str) -> No
         conn.close()
 
 
-def get_pending_image_upload(user_id: int):
+def get_pending_image_upload(user_id: int) -> sqlite3.Row | None:
     """
     Returns the user's most recently uploaded image, if any and if not older
     than PENDING_IMAGE_UPLOAD_TTL_MINUTES - same reasoning as
@@ -1284,7 +1292,7 @@ def log_admin_action(admin_email: str, action: str, target_user_id: int | None =
         conn.close()
 
 
-def list_admin_audit_log(limit: int = 200):
+def list_admin_audit_log(limit: int = 200) -> list[sqlite3.Row]:
     """Most recent admin actions first, with the target user's display name
     joined in for readability (NULL for actions with no specific target,
     e.g. viewing the raw log file)."""
@@ -1305,7 +1313,7 @@ def list_admin_audit_log(limit: int = 200):
         conn.close()
 
 
-def admin_list_users():
+def admin_list_users() -> list[sqlite3.Row]:
     """All users including disabled ones, with message and active-reminder counts."""
     conn = get_connection()
     try:
@@ -1349,7 +1357,7 @@ def admin_set_user_active(user_id: int, is_active: bool) -> None:
         conn.close()
 
 
-def admin_message_stats(days: int = 7):
+def admin_message_stats(days: int = 7) -> list[sqlite3.Row]:
     """Messages per day (both directions) for the last N days, for the dashboard chart."""
     conn = get_connection()
     try:
@@ -1368,7 +1376,7 @@ def admin_message_stats(days: int = 7):
         conn.close()
 
 
-def admin_list_user_reminders(user_id: int):
+def admin_list_user_reminders(user_id: int) -> list[sqlite3.Row]:
     """A specific user's active reminders - for viewing/cancelling from the dashboard."""
     conn = get_connection()
     try:
@@ -1388,7 +1396,7 @@ def admin_list_user_reminders(user_id: int):
         conn.close()
 
 
-def admin_get_user(user_id: int):
+def admin_get_user(user_id: int) -> sqlite3.Row | None:
     """A single user by id, including disabled ones (unlike get_user_by_id, which the bot uses)."""
     conn = get_connection()
     try:
@@ -1398,7 +1406,7 @@ def admin_get_user(user_id: int):
         conn.close()
 
 
-def admin_message_totals():
+def admin_message_totals() -> dict[str, int]:
     """Total messages in the system by direction - used to estimate Gemini cost."""
     conn = get_connection()
     try:
@@ -1410,7 +1418,7 @@ def admin_message_totals():
         conn.close()
 
 
-def get_user_by_number_any_status(whatsapp_number: str):
+def get_user_by_number_any_status(whatsapp_number: str) -> sqlite3.Row | None:
     """
     Like get_user_by_whatsapp_number but *including* disabled users.
     Needed for user management, to distinguish "this number does not exist" from
@@ -1473,7 +1481,7 @@ def save_user_fact(user_id: int, fact_key: str, fact_value: str) -> bool:
         conn.close()
 
 
-def list_user_facts(user_id: int):
+def list_user_facts(user_id: int) -> list[sqlite3.Row]:
     """All facts remembered about a user, oldest first. Fed into the prompt as context."""
     conn = get_connection()
     try:
@@ -1524,7 +1532,7 @@ def update_reminder_schedule(
     schedule_type: str,
     schedule_time: str,
     schedule_days: str | None,
-    next_trigger_at,
+    next_trigger_at: datetime,
 ) -> bool:
     """
     Rewrites a reminder's schedule (used when the user reschedules or snoozes).
@@ -1561,7 +1569,7 @@ def update_reminder_content(reminder_id: int, user_id: int, content: str) -> boo
         conn.close()
 
 
-def get_last_sent_reminder(user_id: int):
+def get_last_sent_reminder(user_id: int) -> sqlite3.Row | None:
     """
     The user's most recently triggered reminder that is still active - the one a
     bare "snooze an hour" almost certainly refers to. Recurring reminders keep
@@ -1607,12 +1615,12 @@ def save_link(
             (user_id, original_url, title, content_snapshot, content_type, fetch_status, embedding),
         )
         conn.commit()
-        return cur.lastrowid
+        return _inserted_id(cur)
     finally:
         conn.close()
 
 
-def list_saved_links(user_id: int, limit: int = 20):
+def list_saved_links(user_id: int, limit: int = 20) -> list[sqlite3.Row]:
     """The user's saved links, newest first."""
     conn = get_connection()
     try:
@@ -1630,7 +1638,7 @@ def list_saved_links(user_id: int, limit: int = 20):
         conn.close()
 
 
-def find_saved_link_by_match(user_id: int, match: str):
+def find_saved_link_by_match(user_id: int, match: str) -> sqlite3.Row | None:
     """
     Finds a saved link by a substring of its title or URL - same
     disambiguation style as reminder_manage's match_content. Returns the
@@ -1665,7 +1673,7 @@ def delete_saved_link(user_id: int, link_id: int) -> bool:
         conn.close()
 
 
-def get_saved_links_with_embeddings(user_id: int):
+def get_saved_links_with_embeddings(user_id: int) -> list[sqlite3.Row]:
     """Every saved link that has a stored embedding, for semantic search."""
     conn = get_connection()
     try:
@@ -1681,7 +1689,7 @@ def get_saved_links_with_embeddings(user_id: int):
         conn.close()
 
 
-def get_messages_with_embeddings(user_id: int, limit: int = 500):
+def get_messages_with_embeddings(user_id: int, limit: int = 500) -> list[sqlite3.Row]:
     """
     This user's most recent embedded messages, for semantic search. Bounded by
     limit since brute-force cosine similarity is done in Python - fine at
@@ -1747,7 +1755,7 @@ def add_tracked_package(
         conn.close()
 
 
-def list_tracked_packages(user_id: int):
+def list_tracked_packages(user_id: int) -> list[sqlite3.Row]:
     """This user's tracked packages, for _handle_package_status to re-check."""
     conn = get_connection()
     try:
@@ -1764,7 +1772,7 @@ def list_tracked_packages(user_id: int):
         conn.close()
 
 
-def get_packages_due_for_check(cutoff_iso: str):
+def get_packages_due_for_check(cutoff_iso: str) -> list[sqlite3.Row]:
     """
     Every tracked package (across all users) not checked since cutoff_iso (or
     never checked), joined with the owning user's whatsapp_number/timezone
@@ -1821,12 +1829,12 @@ def add_watch(user_id: int, watch_type: str, target: str, label: str | None) -> 
             (user_id, watch_type, target, label),
         )
         conn.commit()
-        return cur.lastrowid
+        return _inserted_id(cur)
     finally:
         conn.close()
 
 
-def list_active_watches(user_id: int):
+def list_active_watches(user_id: int) -> list[sqlite3.Row]:
     """This user's active watches, for the 'what am I watching' listing and
     for matching a cancel request against."""
     conn = get_connection()
@@ -1844,7 +1852,7 @@ def list_active_watches(user_id: int):
         conn.close()
 
 
-def get_watches_due_for_check(cutoff_iso: str):
+def get_watches_due_for_check(cutoff_iso: str) -> list[sqlite3.Row]:
     """
     Every active watch (across all users) not checked since cutoff_iso (or
     never checked), joined with the owning user's whatsapp_number for
@@ -1928,7 +1936,7 @@ def add_task(user_id: int, content: str, list_name: str = "default") -> bool:
         conn.close()
 
 
-def list_tasks(user_id: int, list_name: str | None = None, include_done: bool = False):
+def list_tasks(user_id: int, list_name: str | None = None, include_done: bool = False) -> list[sqlite3.Row]:
     """
     A user's items, oldest first. list_name=None spans every list they have,
     which is what "what's on my list" should do when no list was named.
@@ -2031,7 +2039,7 @@ def upsert_kid_schedule_day(user_id: int, kid_name: str, day_of_week: str, conte
         conn.close()
 
 
-def get_kid_schedule(user_id: int, kid_name: str | None = None):
+def get_kid_schedule(user_id: int, kid_name: str | None = None) -> list[sqlite3.Row]:
     """
     All saved schedule days for a user, optionally scoped to one kid. Order
     is by kid_name then insertion (id) - a caller that needs weekday order
@@ -2073,7 +2081,7 @@ def delete_kid_schedule_day(user_id: int, kid_name: str, day_of_week: str | None
         conn.close()
 
 
-def get_kids_schedule_for_day(user_id: int, day_of_week: str):
+def get_kids_schedule_for_day(user_id: int, day_of_week: str) -> list[sqlite3.Row]:
     """Every kid's content for one specific weekday - what
     scheduler.check_and_send_kids_schedule_reminders sends each evening."""
     conn = get_connection()
@@ -2086,7 +2094,7 @@ def get_kids_schedule_for_day(user_id: int, day_of_week: str):
         conn.close()
 
 
-def list_users_with_kids_schedule():
+def list_users_with_kids_schedule() -> list[sqlite3.Row]:
     """Every user who has saved at least one kids_schedule row - what the
     nightly job iterates instead of every user in the system, most of whom
     have never used this feature."""
@@ -2102,7 +2110,7 @@ def list_users_with_kids_schedule():
         conn.close()
 
 
-def find_kid_schedule_owner_by_whatsapp_number(whatsapp_number: str):
+def find_kid_schedule_owner_by_whatsapp_number(whatsapp_number: str) -> tuple[int, str] | None:
     """
     New feature (2026-09-15): lets a kid with their own registered bot
     account (e.g. a message from "נועה") ask about their OWN schedule, which
@@ -2234,7 +2242,7 @@ def clear_daily_meetings_summary_sent_marker(user_id: int) -> None:
         conn.close()
 
 
-def list_users_with_daily_meetings_summary_enabled():
+def list_users_with_daily_meetings_summary_enabled() -> list[sqlite3.Row]:
     """Every user who has opted in - what the morning job iterates instead
     of every user in the system. Includes their own configured time and
     last-sent marker so the caller can decide, per user, whether today's
@@ -2280,7 +2288,7 @@ DEFAULT_PERSISTENT_REMINDER_MAX_ATTEMPTS = 3
 
 
 def save_persistent_reminder(
-    owner_user_id: int, recipient_contact_id: int, content: str, next_trigger_at,
+    owner_user_id: int, recipient_contact_id: int, content: str, next_trigger_at: datetime,
     retry_interval_minutes: int = DEFAULT_PERSISTENT_REMINDER_RETRY_INTERVAL_MINUTES,
     max_attempts: int = DEFAULT_PERSISTENT_REMINDER_MAX_ATTEMPTS,
     schedule_type: str = "once", schedule_time: str | None = None, schedule_days: str | None = None,
@@ -2325,7 +2333,7 @@ def save_persistent_reminder(
         conn.close()
 
 
-def get_due_persistent_reminders(now_utc_iso: str):
+def get_due_persistent_reminders(now_utc_iso: str) -> list[sqlite3.Row]:
     """
     Every 'pending' persistent reminder that is due (next_trigger_at <= now),
     across all owners - what scheduler.check_and_send_persistent_reminders
@@ -2357,7 +2365,7 @@ def get_due_persistent_reminders(now_utc_iso: str):
         conn.close()
 
 
-def advance_persistent_reminder(reminder_id: int, next_trigger_at) -> None:
+def advance_persistent_reminder(reminder_id: int, next_trigger_at: datetime) -> None:
     """Records that one more nag was just sent - bumps attempts_sent and
     schedules the next one."""
     conn = get_connection()
@@ -2385,7 +2393,7 @@ def mark_persistent_reminder_escalated(reminder_id: int) -> None:
         conn.close()
 
 
-def reschedule_persistent_reminder_for_next_occurrence(reminder_id: int, next_trigger_at) -> bool:
+def reschedule_persistent_reminder_for_next_occurrence(reminder_id: int, next_trigger_at: datetime) -> bool:
     """
     2026-09-17: for a recurring (daily/weekly) persistent reminder, resets
     it for its NEXT occurrence instead of terminally resolving - called by
@@ -2432,7 +2440,7 @@ def mark_persistent_reminder_done(reminder_id: int) -> bool:
         conn.close()
 
 
-def list_active_persistent_reminders(owner_user_id: int, recipient_name: str | None = None):
+def list_active_persistent_reminders(owner_user_id: int, recipient_name: str | None = None) -> list[sqlite3.Row]:
     """
     This owner's still-pending nagging reminders - backs the 'list' action.
     recipient_name (2026-09-17): scopes the list to one kid, so "מה יש
@@ -2458,7 +2466,7 @@ def list_active_persistent_reminders(owner_user_id: int, recipient_name: str | N
         conn.close()
 
 
-def find_persistent_reminder_by_match(owner_user_id: int, match: str):
+def find_persistent_reminder_by_match(owner_user_id: int, match: str) -> sqlite3.Row | None:
     """
     Finds exactly one of this owner's pending nagging reminders by content
     or recipient name - same disambiguation style as reminder_manage's
@@ -2510,7 +2518,7 @@ def cancel_persistent_reminder(reminder_id: int, owner_user_id: int) -> bool:
         conn.close()
 
 
-def find_pending_persistent_reminder_for_number(whatsapp_number: str, now_utc_iso: str):
+def find_pending_persistent_reminder_for_number(whatsapp_number: str, now_utc_iso: str) -> sqlite3.Row | None:
     """
     The most recently created nagging reminder addressed to this WhatsApp
     number that is CURRENTLY due/mid-cycle (next_trigger_at <= now), if
@@ -2622,7 +2630,7 @@ def get_usage_summary() -> dict:
     """
     conn = get_connection()
     try:
-        result = {}
+        result: dict[str, dict] = {}
         for provider in ("gemini_generate", "gemini_embed", "ship24"):
             result[provider] = {}
             for period, since_expr in (("today", "start of day"), ("month", "start of month")):
@@ -2642,7 +2650,7 @@ def get_usage_summary() -> dict:
         conn.close()
 
 
-def get_cost_report_state():
+def get_cost_report_state() -> sqlite3.Row | None:
     """The single cost_report_state row - see its own docstring in _run_migrations."""
     conn = get_connection()
     try:
@@ -2674,7 +2682,7 @@ def mark_budget_alert_sent() -> None:
 # ===== Context-Aware Gatekeeper (2026-09-27) - delivery policy =====
 
 
-def get_proactive_settings(user_id: int):
+def get_proactive_settings(user_id: int) -> sqlite3.Row | None:
     """The user's proactive-delivery settings row, or None if they've never
     touched manage_proactive_settings (equivalent to enabled=False - see
     src.proactive.should_deliver_now, which treats a missing row and
@@ -2782,7 +2790,7 @@ def add_vip_sender(owner_user_id: int, identifier: str, label: str | None = None
         conn.close()
 
 
-def list_vip_senders(owner_user_id: int):
+def list_vip_senders(owner_user_id: int) -> list[sqlite3.Row]:
     conn = get_connection()
     try:
         return conn.execute(
@@ -2908,7 +2916,7 @@ def defer_proactive_message(user_id: int, category: str, body: str, identifier: 
         conn.close()
 
 
-def get_deferred_notifications(user_id: int):
+def get_deferred_notifications(user_id: int) -> list[sqlite3.Row]:
     conn = get_connection()
     try:
         return conn.execute(

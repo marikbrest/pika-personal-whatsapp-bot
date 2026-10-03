@@ -62,7 +62,7 @@ class Tool:
     # than guess" principle as today's _validate_result.
     validate: "Callable[[dict], bool] | None" = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not self.renders_own_reply:
             required = self.parameters.get("required", [])
             assert "reply_text" in required, (

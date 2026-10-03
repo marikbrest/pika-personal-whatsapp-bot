@@ -49,3 +49,21 @@ def test_handle_explain_capabilities_never_lists_a_tool_that_is_not_actually_reg
 def test_handle_explain_capabilities_mentions_forwarded_message_suggestions():
     reply = _handle_explain_capabilities({"id": 1, "is_admin": False})
     assert "הודעה מועברת" in reply
+
+
+# Tools that are deliberately NOT in "what can you do?": conversation plumbing, and tools only offered in a
+# specific context (a pending draft / suggestion) or that describe the list itself.
+_NOT_LISTED_ON_PURPOSE = {
+    "chat", "unclear", "explain_capabilities", "respond_to_email_draft", "confirm_suggestion",
+    "send_feature_request_to_developer",
+}
+
+
+def test_every_registered_tool_is_listed_in_capability_groups_or_explicitly_exempt():
+    """The other direction of the drift check: a new tool that is not added to _CAPABILITY_GROUPS would silently
+    be missing from 'what can you do?'. Add it there (or, if it truly should not be listed, to the set above)."""
+    from src.tools.registry import all_tools
+
+    listed = {name for _title, entries in _CAPABILITY_GROUPS for name, _desc in entries}
+    missing = {t.name for t in all_tools()} - listed - _NOT_LISTED_ON_PURPOSE
+    assert not missing, f"tools missing from _CAPABILITY_GROUPS: {sorted(missing)}"

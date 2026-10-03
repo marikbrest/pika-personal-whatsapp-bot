@@ -6,3 +6,27 @@ target-version = "py312"
 # Correctness-only: syntax errors, undefined names, redefinitions, bad comparisons/patterns.
 # Deliberately not enforcing style - the codebase prefers long explanatory comments.
 select = ["E9", "F63", "F7", "F82", "F811", "F821"]
+
+[tool.mypy]
+# Gradual typing: only the modules listed in `files` are checked (and must stay clean). Errors in modules they
+# import are not reported (follow_imports = "silent"), so adding a module here is a deliberate, reviewable step.
+# Run: mypy
+python_version = "3.12"
+files = ["src/db/models.py", "src/proactive.py", "src/tools/registry.py"]
+follow_imports = "silent"
+ignore_missing_imports = true
+explicit_package_bases = true
+namespace_packages = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+disallow_untyped_defs = true
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = ["*/__pycache__/*"]
+
+[tool.coverage.report]
+show_missing = false
+skip_empty = true

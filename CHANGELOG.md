@@ -2,6 +2,14 @@
 
 All notable changes to this project. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- `CLAUDE.md`: tells Claude Code (or any coding agent) exactly how to install, validate, run and change the project. ([README](./README.md))
+- `mypy` in CI for `src/db/models.py`, `src/proactive.py`, `src/tools/registry.py` (all untyped defs annotated; `disallow_untyped_defs`). ([#6](https://github.com/marikbrest/pika-personal-whatsapp-bot/issues/6))
+- Coverage table on each CI run's summary (`pytest-cov`, baseline 74%) and a note in CONTRIBUTING. ([#7](https://github.com/marikbrest/pika-personal-whatsapp-bot/issues/7))
+- Test that every registered tool is listed in the "what can you do?" groups (or explicitly exempt).
+
 ## [0.3.4] - 2026-10-03
 
 ### Added
