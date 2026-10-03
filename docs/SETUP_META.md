@@ -82,7 +82,7 @@ no longer applies: anyone can message the bot, and only layer 2 decides who gets
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| Nothing at all, the bot never reacts | They are not a user in the bot (layer 2) | Add them, then ask them to write again; check the bot's log (`docker compose logs bot`, or `logs/` for a plain install) to see whether the message arrived at all |
+| Nothing at all, the bot never reacts | They are not a user in the bot (layer 2) | Add them, then ask them to write again; check the bot's log (`docker compose logs bot`, or `logs/uvicorn.log` on Windows) to see whether the message arrived at all |
 | Meta shows an error like "recipient not in allowed list" (code `131030`) when the bot replies | Development mode and they are not on Meta's recipient list (layer 1) | Add them under *Manage phone number list* |
 | They never received the confirmation code | Wrong number, or they have not opened WhatsApp on that number recently | Re-send from Meta; try the number in international format |
 | The code was entered but they still get nothing | The number was added in Meta but not in the bot, or the other way round | Check both layers |
