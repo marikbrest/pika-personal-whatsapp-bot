@@ -2,7 +2,7 @@
 
 All notable changes to this project. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.3.2] - 2026-10-03
 
 ### Added
 - `/terms` page, and a bilingual (English/Hebrew) `/privacy` page: names the operator (new `OPERATOR_NAME`)
