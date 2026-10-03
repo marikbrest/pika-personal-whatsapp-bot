@@ -18,6 +18,7 @@ import os
 import signal
 import threading
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -364,7 +365,8 @@ async def logs_page(request: Request, lines: int = 100):
                 all_lines = f.readlines()
             log_text = "".join(all_lines[-lines:])
     except Exception as e:
-        log_text = f"(שגיאה בקריאת הלוג: {e})"
+        print(f"[admin] could not read the log file: {e}")
+        log_text = "(שגיאה בקריאת הלוג - ראו את פלט השרת)"
 
     content = f"""
 <div class="card">
@@ -437,8 +439,8 @@ async def user_reminders_page(request: Request, user_id: int, msg: str = ""):
             <td dir="ltr">{_esc(r['next_trigger_at'])}</td>
             <td>
               <form class="inline" method="post" action="/admin/reminders/cancel">
-                <input type="hidden" name="reminder_id" value="{r['id']}">
-                <input type="hidden" name="user_id" value="{user_id}">
+                <input type="hidden" name="reminder_id" value="{int(r['id'])}">
+                <input type="hidden" name="user_id" value="{int(user_id)}">
                 <button class="danger" type="submit">בטל</button>
               </form>
             </td>
@@ -472,7 +474,7 @@ async def cancel_reminder(request: Request, reminder_id: int = Form(...), user_i
         details=f"reminder_id={reminder_id}, cancelled={cancelled}",
     )
     msg = "התזכורת בוטלה" if cancelled else "התזכורת לא נמצאה אצל המשתמש הזה"
-    return RedirectResponse(f"/admin/users/{user_id}/reminders?msg={msg}", status_code=303)
+    return RedirectResponse(f"/admin/users/{int(user_id)}/reminders?msg={quote(msg)}", status_code=303)
 
 
 @router.get("/system", response_class=HTMLResponse)

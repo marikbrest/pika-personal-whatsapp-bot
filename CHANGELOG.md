@@ -2,6 +2,11 @@
 
 All notable changes to this project. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Security
+- Admin dashboard: URL-encode the redirect message, cast ids to int in rendered forms, and do not echo a file-read exception into the logs page (CodeQL findings).
+
 ## [0.3.3] - 2026-10-03
 
 ### Added
