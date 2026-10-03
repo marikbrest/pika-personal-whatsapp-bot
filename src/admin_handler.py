@@ -33,6 +33,7 @@ from src.db.models import (
     admin_message_totals,
     admin_set_user_active,
     deactivate_reminder,
+    get_user_by_number_any_status,
     list_admin_audit_log,
     log_admin_action,
 )
@@ -242,6 +243,13 @@ async def add_user(request: Request, display_name: str = Form(...), whatsapp_num
     if not ok:
         return RedirectResponse("/admin/?err=המספר כבר קיים", status_code=303)
     log_admin_action(_admin_email(request), "add_user", details=f"whatsapp_number={number}, display_name={display_name.strip()}")
+    new_user = get_user_by_number_any_status(number)
+    if new_user is not None:
+        from starlette.concurrency import run_in_threadpool
+
+        from src.welcome import send_welcome_if_needed
+
+        await run_in_threadpool(send_welcome_if_needed, new_user["id"])  # blocking HTTP call, never raises
     return RedirectResponse("/admin/?msg=המשתמש נוסף", status_code=303)
 
 

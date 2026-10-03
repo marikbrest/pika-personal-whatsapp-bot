@@ -33,6 +33,9 @@ CF_ACCESS_AUD = os.getenv("CF_ACCESS_AUD", "").strip()
 ADMIN_CONTACT_EMAIL = os.getenv("ADMIN_CONTACT_EMAIL", "")
 # Who runs this instance (the data controller), named on /privacy and /terms.
 OPERATOR_NAME = os.getenv("OPERATOR_NAME", "").strip()
+# Public https address of this bot (no trailing slash), e.g. https://assistant.example.com. Used to link new users to
+# /privacy and /terms in the welcome message; leave empty to skip that message.
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
 WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET")
 TOKEN_ENCRYPTION_KEY = os.getenv("TOKEN_ENCRYPTION_KEY")
 ZABBIX_API_URL = os.getenv("ZABBIX_API_URL", "http://localhost:8081/api_jsonrpc.php")

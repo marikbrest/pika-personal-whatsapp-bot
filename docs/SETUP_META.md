@@ -64,6 +64,11 @@ Messages from numbers that are not users are silently ignored by design.
 
 ## Adding a person: two separate approvals
 
+> With `PUBLIC_BASE_URL` set, adding a person also sends them a one-time welcome with your `/privacy` and `/terms`
+> links. Because a new person has not messaged the bot yet, this needs a **`welcome_user`** template (Utility,
+> 2 parameters: privacy URL, terms URL) created like the others in step 6. Suggested wording:
+> *"You were added to the personal assistant. Privacy policy: {{1}} Terms of use: {{2}}"*.
+
 A new person needs to be approved in **two independent places**. Missing either one looks the same
 from their side: the bot never answers.
 

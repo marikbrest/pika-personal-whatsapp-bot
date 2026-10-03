@@ -3104,6 +3104,12 @@ def _handle_user_manage(user: dict, user_manage: dict) -> str:
         display_name = (user_manage.get("display_name") or "").strip() or f"User {number[-4:]}"
         if not admin_add_user(number, display_name):
             return "לא הצלחתי להוסיף את המשתמש, תוכל לנסות שוב?"
+        # Best effort and never raises: send the one-time privacy/terms welcome (needs PUBLIC_BASE_URL).
+        from src.welcome import send_welcome_if_needed
+
+        new_user = get_user_by_number_any_status(number)
+        if new_user is not None:
+            send_welcome_if_needed(new_user["id"])
         return (
             f"✅ {display_name} ({number}) יכול עכשיו להשתמש בבוט.\n"
             f"כדאי שישלח הודעה כלשהי כדי להתחיל — זה גם פותח את חלון 24 השעות "

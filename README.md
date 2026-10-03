@@ -219,6 +219,7 @@ parameters** must match:
 | `package_status_update` | 3 — label, old status, new status | package tracking |
 | `google_reconnect_needed` | 1 — the reconnect link | Google token expired |
 | `proactive_update` | 1 — the update text | proactive mode outside the 24h window |
+| `welcome_user` | 2 — privacy-policy URL, terms URL | one-time welcome sent when you add a user (needs `PUBLIC_BASE_URL`) |
 
 Meta may reclassify a template as *Marketing* if the wording looks promotional — keep the
 text plainly transactional ("update about your calendar: {{1}}") and appeal via
@@ -543,6 +544,7 @@ A few small, genuinely family-specific spots are meant to be edited, not auto-de
   [`src/db/models.py`](./src/db/models.py)) — off/unset for everyone by default; set them
   for your own parent accounts with a one-off `UPDATE users SET ... WHERE
   whatsapp_number = '...'` after your first users are registered.
+- `PUBLIC_BASE_URL` in `.env` — makes the bot send each newly added user a one-time welcome with your `/privacy` and `/terms` links.
 - `OPERATOR_NAME` and `ADMIN_CONTACT_EMAIL` in `.env` — shown on the `/about`, `/privacy` and `/terms` pages Google's
   OAuth consent screen requires (see the Google OAuth gotcha in "Quick setup" above).
 - Regional settings in `.env` if you are not in Israel: `DEFAULT_TIMEZONE`,

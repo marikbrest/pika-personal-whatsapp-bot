@@ -98,6 +98,14 @@ def check_required_env() -> None:
         else:
             check(OK, name, v)
 
+    base = env("PUBLIC_BASE_URL")
+    if base and not base.startswith("https://"):
+        check(FAIL, "PUBLIC_BASE_URL", "must start with https:// (WhatsApp shows the links to your users)")
+    elif base:
+        check(OK, "PUBLIC_BASE_URL", base)
+    else:
+        check(WARN, "PUBLIC_BASE_URL", "not set - new users will NOT be sent the privacy-policy / terms welcome message")
+
     if all(google):
         check(WARN, "Gemini plan (cannot be detected automatically)",
               "Gmail/Calendar/Drive are connected: /privacy promises Google's Limited Use. Use a Gemini API project with "

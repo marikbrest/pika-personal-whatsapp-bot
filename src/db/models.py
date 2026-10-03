@@ -57,6 +57,11 @@ def _run_migrations(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT 1")
         conn.commit()
 
+    if "welcome_sent_at" not in user_cols:
+        # Set once the privacy/terms welcome message (src/welcome.py) was delivered, so it is sent only once.
+        conn.execute("ALTER TABLE users ADD COLUMN welcome_sent_at TIMESTAMP")
+        conn.commit()
+
     if "is_admin" not in user_cols:
         # Only an admin may manage users through chat (see _handle_user_manage).
         # The default of 0 is deliberate - granting admin is an explicit action,

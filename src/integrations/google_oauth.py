@@ -208,6 +208,26 @@ def save_tokens(user_id: int, credentials: Credentials) -> None:
     _credentials_cache.pop(user_id, None)
 
 
+def revoke_google_tokens(user_id: int) -> str:
+    """Revokes the user's Google grant at Google (so the app really loses access, not just our copy).
+    Returns "none" (nothing stored), "revoked", or "failed" (network error / already revoked - the stored
+    row is deleted by the caller either way). Never raises."""
+    import httpx
+
+    from src.db.models import get_oauth_tokens  # late import, avoids a circular import
+
+    row = get_oauth_tokens(user_id, "google")
+    if row is None:
+        return "none"
+    try:
+        token = _fernet().decrypt(row["refresh_token_encrypted"].encode()).decode()
+        r = httpx.post("https://oauth2.googleapis.com/revoke", data={"token": token}, timeout=15)
+        _credentials_cache.pop(user_id, None)
+        return "revoked" if r.status_code == 200 else "failed"
+    except Exception:
+        return "failed"
+
+
 def get_credentials(user_id: int, force_refresh: bool = False) -> Credentials | None:
     """
     Returns valid Credentials for the user, refreshing automatically if the

@@ -4,6 +4,10 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Added
+- `scripts/delete_user.py` (`--dry-run`, `--contacts`): remove a user and all their data in one transaction, revoking their Google grant. ([#18](https://github.com/marikbrest/pika-personal-whatsapp-bot/issues/18))
+- One-time welcome message with the `/privacy` and `/terms` links when a user is added (new `PUBLIC_BASE_URL`, `welcome_user` template, `doctor.py` check). ([#17](https://github.com/marikbrest/pika-personal-whatsapp-bot/issues/17))
+
 ### Security
 - Admin dashboard: URL-encode the redirect message, cast ids to int in rendered forms, and do not echo a file-read exception into the logs page (CodeQL findings).
 
