@@ -9,6 +9,7 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
   `/terms` pages) and reminds you to use a billing-enabled Gemini project when Google is connected.
 - `.env.example` and README say which Gemini tier the privacy policy is true for.
 - `SUPPORT.md`; two privacy-related items on the ROADMAP.
+- `docs/SETUP_META.md`: "Adding a person" section - the two approvals (Meta recipient list and the bot's allowlist) and a no-answer troubleshooting table.
 
 ## [0.3.2] - 2026-10-03
 

@@ -29,7 +29,7 @@ the same string into Meta in step 4.
 
 While in development you can only message numbers you add under **API Setup -> To -> Manage
 phone number list** (each gets a one-time confirmation code). Add your own number and the
-family members' numbers.
+family members' numbers. (Details and troubleshooting: [Adding a person](#adding-a-person-two-separate-approvals).)
 
 ## 3. Start the bot and expose it
 
@@ -61,6 +61,37 @@ python scripts/create_admin.py 972501234567 "Your Name"
 ```
 
 Messages from numbers that are not users are silently ignored by design.
+
+## Adding a person: two separate approvals
+
+A new person needs to be approved in **two independent places**. Missing either one looks the same
+from their side: the bot never answers.
+
+| Layer | What it is | How |
+| --- | --- | --- |
+| **1. Meta** | Meta only lets a WhatsApp number *in development mode* receive messages from your bot if it is on your recipient list. | **WhatsApp -> API Setup -> step 1 "Send messages" -> To -> Manage phone number list -> Add phone number.** Meta sends that person a one-time code on WhatsApp; they give it to you and you enter it. Meta limits how many recipients a test setup may have (currently 5). |
+| **2. The bot** | The bot's own allowlist. A message from any number that is not a user is silently ignored. | Either say to the bot (as admin) *"add user: Dad, 0501234567"*, or use the admin dashboard, or run `python scripts/create_admin.py <number> "<name>"` for another admin. |
+
+Once your app is **live** (App mode switched to *Live*, with your own verified phone number from step 6), layer 1
+no longer applies: anyone can message the bot, and only layer 2 decides who gets an answer.
+
+**Number format** is the same everywhere: international, digits only, no `+`, no spaces or dashes
+(`972501234567`, not `050-1234567` or `+972 50 123 4567`).
+
+### If someone gets no answer
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| Nothing at all, the bot never reacts | They are not a user in the bot (layer 2) | Add them, then ask them to write again; check the bot's log (`docker compose logs bot`, or `logs/` for a plain install) to see whether the message arrived at all |
+| Meta shows an error like "recipient not in allowed list" (code `131030`) when the bot replies | Development mode and they are not on Meta's recipient list (layer 1) | Add them under *Manage phone number list* |
+| They never received the confirmation code | Wrong number, or they have not opened WhatsApp on that number recently | Re-send from Meta; try the number in international format |
+| The code was entered but they still get nothing | The number was added in Meta but not in the bot, or the other way round | Check both layers |
+| Works for a day, then stops for replies you send first | The 24-hour window closed; you need a template for proactive messages | See the template table in the main README |
+
+> Meta renames these menus often and the limits (for example the number of test recipients) change.
+> The menu names above are from memory, not checked against the live interface on every release. If
+> something does not match, the official documentation is at
+> <https://developers.facebook.com/docs/whatsapp/cloud-api/get-started>.
 
 ## 6. Going to production
 
