@@ -8,7 +8,7 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 - `doctor.py` warns when `OPERATOR_NAME` / `ADMIN_CONTACT_EMAIL` are unset (they appear on the public `/privacy` and
   `/terms` pages) and reminds you to use a billing-enabled Gemini project when Google is connected.
 - `.env.example` and README say which Gemini tier the privacy policy is true for.
-- `SUPPORT.md`.
+- `SUPPORT.md`; two privacy-related items on the ROADMAP.
 
 ## [0.3.2] - 2026-10-03
 
