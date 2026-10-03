@@ -2,7 +2,7 @@
 
 All notable changes to this project. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.3.4] - 2026-10-03
 
 ### Added
 - `scripts/delete_user.py` (`--dry-run`, `--contacts`): remove a user and all their data in one transaction, revoking their Google grant. ([#18](https://github.com/marikbrest/pika-personal-whatsapp-bot/issues/18))
