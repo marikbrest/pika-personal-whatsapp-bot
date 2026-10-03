@@ -2,7 +2,7 @@
 
 All notable changes to this project. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.3.3] - 2026-10-03
 
 ### Added
 - `doctor.py` warns when `OPERATOR_NAME` / `ADMIN_CONTACT_EMAIL` are unset (they appear on the public `/privacy` and
