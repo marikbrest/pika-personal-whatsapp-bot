@@ -67,7 +67,7 @@ Everything is covered by 900+ tests that run with no credentials or network.
 | --- | --- |
 | Python 3.12+ (CI tests 3.12, 3.13 and 3.14) | any OS; Windows scripts are provided, Linux/macOS notes below |
 | A WhatsApp Business Cloud API app | free Meta developer account; a test number works to start |
-| A Gemini API key | [Google AI Studio](https://aistudio.google.com/) |
+| A Gemini API key | [Google AI Studio](https://aistudio.google.com/) — a project **with billing enabled** if you connect Gmail/Calendar/Drive or serve other people (the free tier lets Google use submitted content to improve its products; see [Terms & privacy](./docs/TERMS_TEMPLATE.md)) |
 | A Google Cloud OAuth client | only for Calendar/Gmail/Drive features |
 | A public HTTPS URL pointing at the bot | Cloudflare Tunnel (free) is what this project uses |
 

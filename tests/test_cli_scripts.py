@@ -85,3 +85,31 @@ def test_backup_creates_a_consistent_copy_and_prunes_old_ones(tmp_path):
 def test_backup_fails_clearly_when_the_database_is_missing(tmp_path):
     r = _run("backup_db.py", ["--out", str(tmp_path)], env_extra={"DB_PATH": str(tmp_path / "nope.db")})
     assert r.returncode == 1 and "database not found" in r.stderr
+
+
+def _doctor_env(tmp_path, **extra):
+    from cryptography.fernet import Fernet
+
+    env = {
+        "DB_PATH": str(tmp_path / "d.db"), "WHATSAPP_ACCESS_TOKEN": "t", "WHATSAPP_PHONE_NUMBER_ID": "1",
+        "WHATSAPP_WEBHOOK_VERIFY_TOKEN": "v", "WHATSAPP_APP_SECRET": "s", "GEMINI_API_KEY": "g",
+        "TOKEN_ENCRYPTION_KEY": Fernet.generate_key().decode(),
+        "OPERATOR_NAME": "", "ADMIN_CONTACT_EMAIL": "",
+    }
+    env.update(extra)
+    return env
+
+
+def test_doctor_warns_when_the_public_legal_pages_would_show_placeholders(tmp_path):
+    r = _run("doctor.py", env_extra=_doctor_env(tmp_path))
+    assert r.returncode == 0, r.stdout
+    assert "OPERATOR_NAME" in r.stdout and "set it before you invite anyone" in r.stdout
+
+
+def test_doctor_reminds_about_the_gemini_tier_only_when_google_is_connected(tmp_path):
+    without = _run("doctor.py", env_extra=_doctor_env(tmp_path))
+    assert "Gemini plan" not in without.stdout
+    google = {"GOOGLE_CLIENT_ID": "id", "GOOGLE_CLIENT_SECRET": "sec", "GOOGLE_REDIRECT_URI": "https://real.example.org/oauth/callback"}
+    with_google = _run("doctor.py", env_extra=_doctor_env(tmp_path, **google))
+    assert with_google.returncode == 0, with_google.stdout
+    assert "Gemini plan" in with_google.stdout and "billing enabled" in with_google.stdout

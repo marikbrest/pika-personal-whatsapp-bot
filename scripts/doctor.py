@@ -82,12 +82,27 @@ def check_required_env() -> None:
     else:
         check(WARN, "Admin dashboard", "off (ADMIN_ALLOWED_EMAIL not set) - optional")
 
-    for name in ("ADMIN_HOST", "ADMIN_CONTACT_EMAIL"):
+    v = env("ADMIN_HOST")
+    if not v or "your-domain.example" in v:
+        check(WARN, "ADMIN_HOST", "not set - the admin dashboard needs it (optional)")
+    else:
+        check(OK, "ADMIN_HOST", v)
+
+    # These two are printed on the public /privacy and /terms pages. Anyone you invite sees the placeholder
+    # otherwise, so this is a WARN for a private test and effectively a must-fix before inviting people.
+    for name, why in (("OPERATOR_NAME", "named as the person responsible on /privacy and /terms"),
+                      ("ADMIN_CONTACT_EMAIL", "the contact address on /privacy, /terms and /about")):
         v = env(name)
         if not v or "your-domain.example" in v:
-            check(WARN, name, "not set - the admin dashboard and /about page need it (optional)")
+            check(WARN, name, f"not set - {why}; set it before you invite anyone")
         else:
             check(OK, name, v)
+
+    if all(google):
+        check(WARN, "Gemini plan (cannot be detected automatically)",
+              "Gmail/Calendar/Drive are connected: /privacy promises Google's Limited Use. Use a Gemini API project with "
+              "billing enabled (shows as 'Paid' in AI Studio); on the free tier Google may use submitted content "
+              "to improve its products. See docs/TERMS_TEMPLATE.md")
 
 
 def check_database() -> None:
