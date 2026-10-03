@@ -28,9 +28,11 @@ ADMIN_ALLOWED_EMAIL = os.getenv("ADMIN_ALLOWED_EMAIL", "")
 # AUD is the Application Audience tag of the Access application protecting ADMIN_HOST.
 CF_ACCESS_TEAM_DOMAIN = os.getenv("CF_ACCESS_TEAM_DOMAIN", "").strip().removeprefix("https://").rstrip("/")
 CF_ACCESS_AUD = os.getenv("CF_ACCESS_AUD", "").strip()
-# Shown on the /about and /privacy pages (see src/main.py) - the Google
-# OAuth consent screen requires both, with a real contact address.
+# Shown on the /about, /privacy and /terms pages (see src/legal_pages.py) - the Google
+# OAuth consent screen requires a privacy page with a real contact address.
 ADMIN_CONTACT_EMAIL = os.getenv("ADMIN_CONTACT_EMAIL", "")
+# Who runs this instance (the data controller), named on /privacy and /terms.
+OPERATOR_NAME = os.getenv("OPERATOR_NAME", "").strip()
 WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET")
 TOKEN_ENCRYPTION_KEY = os.getenv("TOKEN_ENCRYPTION_KEY")
 ZABBIX_API_URL = os.getenv("ZABBIX_API_URL", "http://localhost:8081/api_jsonrpc.php")

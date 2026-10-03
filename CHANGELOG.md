@@ -2,6 +2,18 @@
 
 All notable changes to this project. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- `/terms` page, and a bilingual (English/Hebrew) `/privacy` page: names the operator (new `OPERATOR_NAME`)
+  and recipients, Google API Limited Use disclosure, retention, user rights, third-party contacts, children.
+- `docs/TERMS_TEMPLATE.md`, plus Hebrew versions of it and of the operator privacy guide.
+- README note that whoever hosts the bot is the operator and can technically read the database.
+
+### Changed
+- `/privacy` now names Gemini and Meta as recipients and no longer claims nobody can see the data
+  (the server's operator can); it previously said data is "never shared with a third party".
+
 ## [0.3.1] - 2026-10-03
 
 ### Added

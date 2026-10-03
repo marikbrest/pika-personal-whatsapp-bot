@@ -21,6 +21,7 @@ from fastapi.responses import HTMLResponse
 from src.admin_handler import router as admin_router
 from src.config import ADMIN_CONTACT_EMAIL
 from src.db.models import init_db
+from src.legal_pages import privacy_html, terms_html
 from src.oauth_handler import router as oauth_router
 from src.scheduler import start_scheduler_loop
 from src.webhook_handler import router as webhook_router
@@ -96,39 +97,7 @@ def _about_html() -> str:
 and proactive updates. Not a public app and not open for sign-up - it only serves the
 family members the admin has personally added.</p>
 <p>Questions: <a href="mailto:{contact}">{contact}</a></p>
-<p><a href="/privacy">Privacy policy</a></p>
-</body>
-</html>"""
-
-
-def _privacy_html() -> str:
-    contact = ADMIN_CONTACT_EMAIL or "(set ADMIN_CONTACT_EMAIL in .env)"
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Privacy Policy - Personal WhatsApp Assistant</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>body{{font-family:sans-serif;max-width:640px;margin:40px auto;padding:0 16px;line-height:1.6}}</style>
-</head>
-<body>
-<h1>Privacy Policy</h1>
-<p>This Personal WhatsApp Assistant is a private, non-public bot serving only the family
-members its admin has personally invited.</p>
-<ul>
-<li>Every conversation with the bot is private - no other user, including the admin, sees
-the content of your messages or emails.</li>
-<li>The admin can see message counts and active reminders only - never conversation or
-email content - and every admin view is recorded in an audit log.</li>
-<li>If a user enables "proactive mode" (off by default), the bot reads calendar/email
-content in the background to decide what's worth surfacing. That content is sent to an
-AI model for detection and wording only - no human ever sees it.</li>
-<li>Google data (Calendar/Gmail) is stored only to power the features the user asked for,
-and is never shared with a third party.</li>
-<li>Any user can ask at any time to see what's stored about them, or to delete their
-conversation history.</li>
-</ul>
-<p>Questions or data-deletion requests: <a href="mailto:{contact}">{contact}</a></p>
+<p><a href="/privacy">Privacy policy</a> · <a href="/terms">Terms of use</a></p>
 </body>
 </html>"""
 
@@ -142,5 +111,11 @@ async def about_page():
 @app.get("/privacy", response_class=HTMLResponse)
 async def privacy_page():
     """Google OAuth consent screen privacy-policy requirement - same reason as about_page. Content mirrors webhook_handler._PRIVACY_EXPLANATION; keep both in sync if either changes."""
-    return _privacy_html()
+    return privacy_html()
+
+
+@app.get("/terms", response_class=HTMLResponse)
+async def terms_page():
+    """Terms of use, English + Hebrew. Some OAuth/app reviews ask for a terms URL next to the privacy one."""
+    return terms_html()
 

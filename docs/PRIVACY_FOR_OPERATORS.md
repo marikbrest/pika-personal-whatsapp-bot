@@ -21,6 +21,8 @@ and calendar. This is what the software actually does, so you can tell your user
 
 Google states API data is not used to train its models on paid/billing-enabled projects, but that is
 Google's policy, not something this software enforces — read the terms of the plan your key is on.
+**On the unpaid tier Google may use submitted content to improve its products and humans may review it**,
+which contradicts the Limited Use statement on `/privacy`: use a billing-enabled project if anyone connects Google.
 
 ## What is stored (one SQLite file, `DB_PATH`)
 
@@ -54,8 +56,9 @@ confirmation step.
 ## Before you onboard other people
 
 1. Tell them what's in the table above, in plain language.
-2. Publish a privacy page — the bot serves `/privacy` (set `ADMIN_CONTACT_EMAIL`); Google's OAuth
-   consent screen requires one.
+2. Publish a privacy page and terms — the bot serves `/privacy` and `/terms`, English + Hebrew (set
+   `ADMIN_CONTACT_EMAIL`); Google's OAuth consent screen requires a privacy page. See
+   [TERMS_TEMPLATE.md](./TERMS_TEMPLATE.md). Hebrew version of this guide: [PRIVACY_FOR_OPERATORS.he.md](./PRIVACY_FOR_OPERATORS.he.md).
 3. Decide how long you keep backups, and delete a leaver's data (`delete_history` + remove the user).
 4. If you are subject to GDPR or similar, this is a family/personal-use tool by design; running it
    for the public is a different compliance problem this project does not solve.

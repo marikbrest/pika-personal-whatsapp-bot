@@ -242,7 +242,7 @@ and email content is sent to Gemini for classification/wording only; see
 | `scripts/create_admin.py <number> "<name>"` | create/promote the first admin |
 | `scripts/backup_db.py` | consistent database backup (any OS) |
 
-Guides: [Meta/WhatsApp setup](./docs/SETUP_META.md) · [Troubleshooting](./TROUBLESHOOTING.md) · [Costs](./docs/COSTS.md) · [Privacy notes for operators](./docs/PRIVACY_FOR_OPERATORS.md) · [Adding a capability](./docs/ADDING_A_TOOL.md) · [Roadmap](./ROADMAP.md) · [Changelog](./CHANGELOG.md) · [Contributing](./CONTRIBUTING.md)
+Guides: [Meta/WhatsApp setup](./docs/SETUP_META.md) · [Troubleshooting](./TROUBLESHOOTING.md) · [Costs](./docs/COSTS.md) · [Privacy notes for operators](./docs/PRIVACY_FOR_OPERATORS.md) ([עברית](./docs/PRIVACY_FOR_OPERATORS.he.md)) · [Terms & privacy pages](./docs/TERMS_TEMPLATE.md) ([עברית](./docs/TERMS_TEMPLATE.he.md)) · [Adding a capability](./docs/ADDING_A_TOOL.md) · [Roadmap](./ROADMAP.md) · [Changelog](./CHANGELOG.md) · [Contributing](./CONTRIBUTING.md)
 
 ### Google Cloud OAuth setup gotcha
 
@@ -498,6 +498,11 @@ database operation, never automatic — use `python scripts/create_admin.py <num
 > Mom") and a **user** (permission to use the bot). Ambiguous phrasing defaults to
 > creating a contact, which is the less privileged of the two.
 
+> **If you run this for other people, you are the operator.** You decide what happens to their data, you can
+> technically read the database, and the software comes under the MIT license "as is", without warranty. The bot
+> serves a bilingual (English/Hebrew) privacy policy at `/privacy` and terms of use at `/terms`; see
+> [what to publish before inviting anyone](./docs/TERMS_TEMPLATE.md). This is not legal advice.
+
 ## Admin dashboard
 
 Available at `https://admin.your-domain.example/admin/`, protected by two layers: Cloudflare
@@ -538,10 +543,16 @@ A few small, genuinely family-specific spots are meant to be edited, not auto-de
   [`src/db/models.py`](./src/db/models.py)) — off/unset for everyone by default; set them
   for your own parent accounts with a one-off `UPDATE users SET ... WHERE
   whatsapp_number = '...'` after your first users are registered.
-- `ADMIN_CONTACT_EMAIL` in `.env` — shown on the `/about` and `/privacy` pages Google's
+- `OPERATOR_NAME` and `ADMIN_CONTACT_EMAIL` in `.env` — shown on the `/about`, `/privacy` and `/terms` pages Google's
   OAuth consent screen requires (see the Google OAuth gotcha in "Quick setup" above).
 - Regional settings in `.env` if you are not in Israel: `DEFAULT_TIMEZONE`,
   `DEFAULT_LOCATION` (weather default) and `WHATSAPP_TEMPLATE_LANGUAGE`.
+
+## Questions
+
+Open an [issue](https://github.com/marikbrest/pika-personal-whatsapp-bot/issues) or a discussion, or email
+[marik.brest@gmail.com](mailto:marik.brest@gmail.com). For security problems, use [SECURITY.md](./SECURITY.md) instead.
+This address is for questions about the project; the privacy contact for a running bot is whoever operates it.
 
 ## License
 
