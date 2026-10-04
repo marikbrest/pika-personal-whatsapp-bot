@@ -45,7 +45,7 @@ def test_package_status_sentinels_stay_hebrew_in_the_db_but_display_localized(en
     assert package_status_label("in_transit") == "in_transit"
 
 
-def test_calendar_monitor_alert_is_english(db_path, make_user, english):
+def test_calendar_monitor_alert_is_english(db_path, make_user, english, daytime_clock):
     from src.scheduler import check_and_monitor_calendar_changes
 
     make_user(whatsapp_number="972500000001", display_name="Dana", is_admin=True)
