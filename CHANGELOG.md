@@ -2,7 +2,7 @@
 
 All notable changes to this project. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.4.0] - 2026-10-04
 
 ### Added
 - **OpenAI as an optional AI provider**, chosen per user ("switch to OpenAI" / "switch to Gemini" / "which model am I using?") and applied to their
