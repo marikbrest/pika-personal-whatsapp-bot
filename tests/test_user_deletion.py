@@ -69,6 +69,7 @@ def test_every_table_that_points_at_users_is_emptied_and_the_other_user_is_untou
 
     assert _rows_for(target) == {}
     assert counts["users"] == 1
+    assert counts.get("ai_preferences") == 1  # the per-user AI provider choice goes too
     other_left = _rows_for(other)
     assert other_left.get("users") == 1 and "messages" in other_left and "contacts" in other_left
 

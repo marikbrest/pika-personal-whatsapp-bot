@@ -44,3 +44,23 @@ def test_main_serves_both_pages_and_about_links_to_them():
     src = open("src/main.py", encoding="utf-8").read()
     assert '@app.get("/privacy"' in src and '@app.get("/terms"' in src
     assert 'href="/privacy">Privacy policy</a> · <a href="/terms">' in src
+
+
+def test_openai_is_named_as_a_recipient_only_when_the_operator_enabled_it():
+    with patch.object(legal_pages.config, "OPENAI_API_KEY", ""), patch.object(legal_pages.config, "OPENAI_MODEL", ""):
+        off = privacy_html()
+    with patch.object(legal_pages.config, "OPENAI_API_KEY", "k"), patch.object(legal_pages.config, "OPENAI_MODEL", "m"):
+        on = privacy_html()
+    assert "OpenAI" not in off
+    assert on.count("<b>OpenAI</b>") == 2  # English and Hebrew
+    with patch.object(legal_pages.config, "OPENAI_API_KEY", "k"), patch.object(legal_pages.config, "OPENAI_MODEL", ""):
+        assert "OpenAI" not in privacy_html()  # a key alone does not enable it
+
+
+def test_welcome_message_mentions_openai_only_when_enabled():
+    from src import config, welcome
+
+    with patch.object(config, "OPENAI_API_KEY", ""), patch.object(config, "OPENAI_MODEL", ""):
+        assert "OpenAI" not in welcome.welcome_text("https://x/privacy", "https://x/terms")
+    with patch.object(config, "OPENAI_API_KEY", "k"), patch.object(config, "OPENAI_MODEL", "m"):
+        assert "OpenAI" in welcome.welcome_text("https://x/privacy", "https://x/terms")

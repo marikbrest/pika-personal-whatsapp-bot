@@ -22,3 +22,4 @@ from src.tools import batch14  # noqa: F401
 from src.tools import batch15  # noqa: F401
 from src.tools import batch16  # noqa: F401
 from src.tools import batch17  # noqa: F401
+from src.tools import ai_settings  # noqa: F401

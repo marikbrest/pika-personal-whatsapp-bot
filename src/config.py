@@ -10,6 +10,28 @@ WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 WHATSAPP_WEBHOOK_VERIFY_TOKEN = os.getenv("WHATSAPP_WEBHOOK_VERIFY_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+# Optional second AI provider (see src/ai.py and docs/ADDING_A_PROVIDER.md). OPENAI_MODEL has NO default on
+# purpose: model names change, and a stale default would silently 404; OpenAI stays "not configured" until it is set.
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "").strip()
+OPENAI_TRANSCRIPTION_MODEL = os.getenv("OPENAI_TRANSCRIPTION_MODEL", "gpt-4o-mini-transcribe")
+# Which provider users get until they choose one themselves ("gemini" or "openai"; checked in src/ai.py and doctor.py).
+AI_DEFAULT_PROVIDER = os.getenv("AI_DEFAULT_PROVIDER", "gemini").strip().lower()
+# Optional USD prices per million tokens, only used for the cost report. Unset = the model's calls are reported as
+# "unpriced" instead of being counted as free.
+def _price(name: str) -> float | None:
+    raw = os.getenv(name, "").strip()
+    try:
+        return float(raw) if raw else None
+    except ValueError:
+        return None
+
+
+OPENAI_PRICE_INPUT_PER_M = _price("OPENAI_PRICE_INPUT_PER_M")
+OPENAI_PRICE_CACHED_INPUT_PER_M = _price("OPENAI_PRICE_CACHED_INPUT_PER_M")
+OPENAI_PRICE_OUTPUT_PER_M = _price("OPENAI_PRICE_OUTPUT_PER_M")
+OPENAI_PRICE_WEB_SEARCH_PER_CALL = _price("OPENAI_PRICE_WEB_SEARCH_PER_CALL")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "https://your-domain.example/oauth/callback")

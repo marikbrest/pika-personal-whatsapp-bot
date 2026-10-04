@@ -799,7 +799,10 @@ def check_and_send_persistent_reminders() -> None:
             # check_and_send_reminders' own prefix - this text goes TO the
             # kid, never to the parent themselves.
             owner_kid_facing_name = row["owner_kid_facing_role"] or row["owner_display_name"]
-            body = _generate_creative_reminder_text(row["content"], row["recipient_name"], owner_kid_facing_name)
+            from src.ai import use_user
+
+            with use_user({"id": row["owner_user_id"]}):  # the OWNER's provider writes the nag
+                body = _generate_creative_reminder_text(row["content"], row["recipient_name"], owner_kid_facing_name)
 
             # 2026-09-25: send_text_or_template, NOT send_text_message.
             # This path was the one place a proactive message to a kid
@@ -887,7 +890,14 @@ def check_and_send_cost_report() -> None:
 
     try:
         billing = get_month_to_date_cost()
-        month_cost = billing["total"] if billing else _estimated_month_cost_usd()
+        from src.integrations.ai_costs import openai_month_cost
+
+        # A real Google invoice in USD can be combined with the OpenAI estimate; in another currency (or with no billing
+        # export) fall back to the token-based estimate, which already includes OpenAI.
+        month_cost = (
+            billing["total"] + openai_month_cost()[0]
+            if billing and billing.get("currency") == "USD" else _estimated_month_cost_usd()
+        )
     except Exception as e:
         print(f"[scheduler] cost guard: could not determine month-to-date cost (non-fatal): {e}")
         return
@@ -1128,7 +1138,10 @@ def check_and_monitor_new_emails() -> None:
             if first_run_for_user or not new_emails:
                 continue
 
-            classifications = classify_new_emails(new_emails)
+            from src.ai import use_user
+
+            with use_user(user):
+                classifications = classify_new_emails(new_emails)
         except Exception as e:
             print(f"[scheduler] email monitor: processing failed for user {user['id']}: {e}")
             continue

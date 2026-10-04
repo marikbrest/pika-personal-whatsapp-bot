@@ -6,6 +6,7 @@ It needs PUBLIC_BASE_URL (the bot does not otherwise know its own public address
 never messaged the bot, falls back to the `welcome_user` template (2 parameters: privacy URL, terms URL) when the
 24-hour window is closed - see docs/SETUP_META.md.
 """
+from src import config
 from src.config import OPERATOR_NAME, PUBLIC_BASE_URL, WHATSAPP_TEMPLATE_LANGUAGE
 from src.db.models import get_connection
 from src.integrations.whatsapp import send_text_or_template
@@ -17,7 +18,9 @@ def welcome_text(privacy_url: str, terms_url: str) -> str:
     who = f" של {OPERATOR_NAME}" if OPERATOR_NAME else ""
     return (
         f"👋 הוספו אותך לעוזר האישי{who}.\n"
-        "מה חשוב לדעת על המידע שלך: ההודעות שלך נשלחות ל-Gemini של Google ועוברות דרך WhatsApp של מטא, "
+        "מה חשוב לדעת על המידע שלך: ההודעות שלך נשלחות ל-Gemini של Google"
+        + (" (או ל-OpenAI, אם תבחר בו)" if config.OPENAI_API_KEY and config.OPENAI_MODEL else "")
+        + " ועוברות דרך WhatsApp של מטא, "
         "ומי שמפעיל את הבוט יכול טכנית לקרוא אותן.\n"
         f"מדיניות פרטיות: {privacy_url}\n"
         f"תנאי שימוש: {terms_url}\n"

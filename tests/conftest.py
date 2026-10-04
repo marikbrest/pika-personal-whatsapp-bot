@@ -59,8 +59,11 @@ os.environ.setdefault("ADMIN_ALLOWED_EMAIL", "admin@example.com")
 # these integrations fires exactly as if .env genuinely had nothing there.
 for _optional_integration_key in (
     "ZABBIX_API_URL", "ZABBIX_API_TOKEN", "UNIFI_HOST", "UNIFI_API_KEY", "SHIP24_API_KEY",
+    "OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_PRICE_INPUT_PER_M", "OPENAI_PRICE_CACHED_INPUT_PER_M",
+    "OPENAI_PRICE_OUTPUT_PER_M", "OPENAI_PRICE_WEB_SEARCH_PER_CALL",
 ):
     os.environ[_optional_integration_key] = ""
+os.environ["AI_DEFAULT_PROVIDER"] = "gemini"
 
 # A second, independent safety net for the same incident: any test that
 # forgets to request the db_path fixture must still be structurally

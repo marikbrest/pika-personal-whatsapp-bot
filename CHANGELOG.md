@@ -2,6 +2,15 @@
 
 All notable changes to this project. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- **OpenAI as an optional AI provider**, chosen per user ("switch to OpenAI" / "switch to Gemini" / "which model am I using?") and applied to their
+  proactive alerts too. Provider registry in `src/ai.py`; OpenAI adapter on the Responses API (`store: false`, strict validated tool calls, no
+  fallback to the other provider, no content in logs); usage and cost in the usage report; `/privacy` and the welcome message name OpenAI
+  automatically when enabled; `doctor.py` checks the settings. Embeddings and image generation stay on Gemini. Guide: `docs/ADDING_A_PROVIDER.md`. ([#2](https://github.com/marikbrest/pika-personal-whatsapp-bot/issues/2))
+- `GEMINI_MODEL` setting (default `gemini-flash-latest`).
+
 ## [0.3.5] - 2026-10-03
 
 ### Added

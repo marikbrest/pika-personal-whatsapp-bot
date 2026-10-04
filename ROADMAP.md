@@ -8,9 +8,9 @@ issue; see [CONTRIBUTING.md](./CONTRIBUTING.md) and [docs/ADDING_A_TOOL.md](./do
 - **English (and other-language) replies.** The bot understands English, but the messages the code
   itself composes (confirmations, lists, errors) are Hebrew string literals. Extract them into
   per-language catalogs with a `LOCALE` setting. Biggest barrier for non-Hebrew users.
-- **Other LLM providers.** Gemini is called through a thin layer
-  (`src/integrations/gemini.py`, `src/tools/gemini_adapter.py`); abstract it so OpenAI/Anthropic/local
-  models can be swapped in.
+- **More LLM providers.** OpenAI is built in as an optional per-user provider
+  ([docs/ADDING_A_PROVIDER.md](./docs/ADDING_A_PROVIDER.md)); Anthropic or a local OpenAI-compatible server would each be one adapter
+  module plus a registry entry.
 - **Other channels.** WhatsApp specifics live in `src/integrations/whatsapp.py` and the webhook;
   a Telegram (or Signal/Matrix) adapter would reuse the whole tool pipeline.
 - **Deployment recipes:** a systemd unit, a Caddy/Traefik compose example as an alternative to

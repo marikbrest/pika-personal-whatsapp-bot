@@ -15,12 +15,16 @@ import json
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
+from contextvars import copy_context
+from functools import partial
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Header, Query, Request, Response
 
+from src.ai import current_provider, provider_command, unavailable_reply, use_provider, use_user
 from src.config import DEFAULT_TIMEZONE, DEFAULT_LOCATION, WHATSAPP_APP_SECRET, WHATSAPP_WEBHOOK_VERIFY_TOKEN
 from src.db.models import (
     MAX_ACTIVE_PERSISTENT_REMINDERS_PER_USER,
@@ -384,7 +388,7 @@ def _format_pending_draft_for_tools(pending_draft) -> str:
 
 def _classify_text_with_cutover(
     text_body: str, user: dict, history, contacts, pending_draft, facts, pending_suggestion=None,
-    pending_image_upload=None,
+    pending_image_upload=None, allow_provider_change=True,
 ) -> dict:
     """
     Real cutover (2026-09-14) for the function-calling migration's tools -
@@ -452,6 +456,9 @@ def _classify_text_with_cutover(
     import src.tools  # noqa: F401 - populates the registry on first import
 
     tools = tools_for(user)
+    if not allow_provider_change:
+        # a forwarded/quoted message must never be able to change a setting
+        tools = [t for t in tools if t.name != "manage_ai_provider"]
     if pending_draft is None:
         tools = [t for t in tools if t.name != "respond_to_email_draft"]
     if pending_suggestion is None:
@@ -480,6 +487,16 @@ def _classify_text_with_cutover(
                 # dispatch below must not run it a second time (several tool names,
                 # e.g. add_contact/web_search/connect_google, match old intent names).
                 return {"intent": tool_name, tool_name: args, "reply": reply, "tool_executed": True}
+
+    if current_provider() != "gemini":
+        # The legacy classifier would just call the same (failed or unsure) provider again, so do not fall back to it:
+        # answer from a real chat/unclear result, otherwise tell the user the provider is unavailable. Nothing is
+        # ever sent to the other provider behind the user's back.
+        if pilot_result is not None and pilot_result[0] in ("chat", "unclear"):
+            tool = next((t for t in tools if t.name == pilot_result[0]), None)
+            if tool is not None:
+                return {"intent": pilot_result[0], "reply": execute_tool(tool, user, pilot_result[1]), "tool_executed": True}
+        return {"intent": "unclear", "reply": unavailable_reply(), "tool_executed": True}
 
     return parse_message(
         text_body, timezone_name=user["timezone"], history=history, contacts=contacts,
@@ -787,7 +804,7 @@ def _suggest_action_from_forwarded(
     tools = tools_for(user)
     if pending_draft is None:
         tools = [t for t in tools if t.name != "respond_to_email_draft"]
-    tools = [t for t in tools if t.name not in ("confirm_suggestion", "respond_to_email_draft")]
+    tools = [t for t in tools if t.name not in ("confirm_suggestion", "respond_to_email_draft", "manage_ai_provider")]
 
     suppressed = get_suppressed_suggestion_tools(user["id"])
     tools = [t for t in tools if t.name not in suppressed]
@@ -1322,6 +1339,7 @@ _CAPABILITY_GROUPS = [
         ("get_weather", "מזג אוויר בכל מקום ותאריך"),
         ("get_market_quote", "מחירי מניות ומטבעות בזמן אמת"),
         ("web_search", "לחפש מידע עדכני באינטרנט"),
+        ("manage_ai_provider", "לבחור באיזה ספק AI אני משתמש (Gemini או OpenAI, אם הופעל) ולבדוק את הספק והמודל הנוכחיים"),
         ("search_history", "לחפש בשיחות ישנות ובקישורים ששמרת"),
         ("manage_drive", "לחפש קבצים ב-Google Drive, או לשמור הערה חדשה"),
         ("connect_google", "לחבר את Gmail/Calendar/Drive שלך לבוט"),
@@ -1409,6 +1427,9 @@ _PRIVACY_EXPLANATION = (
     "אני קורא את המיילים והיומן שלך ברקע כדי להחליט מה כדאי לעדכן אותך עליו - זה נשלח למודל AI "
     "לצורך זיהוי וניסוח בלבד, שום בן אדם (כולל המנהל) לא רואה את זה. זה כבוי כברירת מחדל, ורק אתה "
     "מפעיל את זה אצלך.\n\n"
+    "תוכן ההודעות והמידע הדרוש מיומן ומייל נשלחים לספק ה-AI שנבחר: Gemini של Google כברירת מחדל, "
+    "או OpenAI אם מי שמפעיל את הבוט הפעיל אותו ובחרת בו. חיפוש בזיכרון ויצירת תמונות תמיד משתמשים ב-Gemini. "
+    "בבקשות OpenAI מוגדר store=false, אך זו אינה הבטחה לאפס שמירה מצד השירות.\n\n"
     "אתה תמיד יכול לבקש ממני \"תראה לי מה יש עליי\" כדי לראות בדיוק מה שמור אצלי, "
     "או \"תמחק את ההיסטוריה שלי\" כדי למחוק את יומן השיחה שלך."
 )
@@ -1470,6 +1491,16 @@ def _handle_manage_my_data(user: dict, args: dict) -> str:
 
 
 def _process_single_message(message: dict) -> None:
+    """Runs the pipeline with the sender's AI provider scoped to this request only (see src/ai.py)."""
+    try:
+        sender = get_user_by_whatsapp_number(message["from"])
+    except Exception:
+        sender = None
+    with use_user(sender) if sender is not None else nullcontext():
+        _process_single_message_impl(message)
+
+
+def _process_single_message_impl(message: dict) -> None:
     """
     Handles a single inbound message (text or voice). Each message is isolated in
     its own error handling, so a failure in one does not affect the others (12.3).
@@ -1541,8 +1572,13 @@ def _process_single_message(message: dict) -> None:
                 # this is a special pre-check rather than a registered tool.
                 # A genuine confirmation short-circuits everything else
                 # below, same as a forwarded-message suggestion does.
-                confirmation_result = None
-                if pending_task_confirmation is not None:
+                # Exact provider commands ("switch to OpenAI") need no model call and work while the
+                # selected provider is down. Never for a forwarded message.
+                command_reply = provider_command(text_body, user) if not is_forwarded else None
+                confirmation_result = (
+                    {"intent": "chat", "reply": command_reply, "tool_executed": True} if command_reply is not None else None
+                )
+                if pending_task_confirmation is not None and confirmation_result is None:
                     confirmation_result = _check_task_confirmation(text_body, pending_task_confirmation, user)
 
                 suggestion_result = None
@@ -1569,6 +1605,7 @@ def _process_single_message(message: dict) -> None:
                     result = _classify_text_with_cutover(
                         text_body, user, history, contacts, pending_draft, facts, pending_suggestion,
                         pending_image_upload,
+                        **({"allow_provider_change": False} if is_forwarded else {}),
                     )
         elif msg_type in ("image", "document"):
             media = message.get(msg_type, {}) or {}
@@ -1646,7 +1683,7 @@ def _process_single_message(message: dict) -> None:
                     media_bytes, mime_type, "media", caption, user,
                     history, contacts, pending_draft, facts, pending_suggestion, pending_image_upload,
                 )
-                if cutover_result is not None and cutover_result["intent"] not in ("chat", "unclear"):
+                if cutover_result is not None and (cutover_result["intent"] not in ("chat", "unclear") or current_provider() != "gemini"):
                     result = cutover_result
                 else:
                     result = parse_media_message(
@@ -1681,7 +1718,7 @@ def _process_single_message(message: dict) -> None:
                     audio_bytes, mime_type, "voice", "", user,
                     history, contacts, pending_draft, facts, pending_suggestion, pending_image_upload,
                 )
-                if cutover_result is not None and cutover_result["intent"] not in ("chat", "unclear"):
+                if cutover_result is not None and (cutover_result["intent"] not in ("chat", "unclear") or current_provider() != "gemini"):
                     result = cutover_result
                 else:
                     result = parse_voice_message(
@@ -1700,7 +1737,8 @@ def _process_single_message(message: dict) -> None:
         # the raw audio/image bytes), so the same content-matched-reaction
         # behavior applies uniformly to every message type, not just text.
         threading.Thread(
-            target=_react_to_message_in_background, args=(from_number, whatsapp_message_id, raw_content), daemon=True,
+            target=partial(copy_context().run, _react_to_message_in_background),
+            args=(from_number, whatsapp_message_id, raw_content), daemon=True,
         ).start()
 
         # New feature (2026-09-26): when the old classifier's "chat" handling
@@ -2412,7 +2450,9 @@ def _estimated_month_cost_usd() -> float:
         total += p["input_tokens"] * prices["input"] / 1_000_000
         if "output" in prices:
             total += p["output_tokens"] * prices["output"] / 1_000_000
-    return total
+    from src.integrations.ai_costs import openai_month_cost
+
+    return total + openai_month_cost()[0]
 
 
 def _build_usage_report_text() -> str:
@@ -2440,6 +2480,8 @@ def _build_usage_report_text() -> str:
             lines.append(f"  {period_label}: {p['calls']} קריאות, {p['input_tokens']+p['output_tokens']:,} טוקנים, ${cost:.4f}")
         return f"{label}:\n" + "\n".join(lines)
 
+    from src.integrations.ai_costs import openai_report
+
     ship24_month_calls = usage["ship24"]["month"]["calls"]
     ship24_line = (
         f"📮 Ship24: {ship24_month_calls}/{_SHIP24_MONTHLY_QUOTA} קריאות החודש "
@@ -2453,6 +2495,7 @@ def _build_usage_report_text() -> str:
         + _gemini_line("🔎 Gemini (הטמעות לחיפוש - הערכה, לא מדויק)", "gemini_embed", _GEMINI_EMBED_PRICE_PER_M)
         + "\n\n"
         + ship24_line
+        + openai_report()
         + _format_real_billing_line()
     )
 
@@ -2672,7 +2715,7 @@ def _handle_package_status(user: dict, package_status: dict) -> str:
                 # worthwhile to parallelize, since this is the slower step.
                 with ThreadPoolExecutor(max_workers=len(new_candidates)) as pool:
                     extractions = list(
-                        pool.map(lambda b: call_gemini_json(_PACKAGE_EXTRACTION_PROMPT.format(body=b)), bodies)
+                        pool.map(lambda pair: _extract_package_with_provider(*pair), [(b, current_provider()) for b in bodies])
                     )
 
                 for email, extracted in zip(new_candidates, extractions):
@@ -3415,3 +3458,9 @@ def _handle_daily_meetings_summary(user: dict, args: dict) -> str:
     if not enabled:
         return "🔕 הסיכום היומי האוטומטי כבוי אצלך."
     return f"✅ הסיכום היומי האוטומטי פעיל אצלך ({get_daily_meetings_summary_time(user['id'])})."
+
+
+def _extract_package_with_provider(body: str, provider: str):
+    """Worker threads do not inherit the request's provider; pass it in explicitly."""
+    with use_provider(provider):
+        return call_gemini_json(_PACKAGE_EXTRACTION_PROMPT.format(body=body))

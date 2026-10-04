@@ -18,9 +18,10 @@ import json
 from google import genai
 from google.genai import types
 
-from src.config import GEMINI_API_KEY
+from src.ai import current_provider, get_adapter
+from src.config import GEMINI_API_KEY, GEMINI_MODEL
 
-MODEL_NAME = "gemini-flash-latest"  # Google's alias for the current recommended flash
+MODEL_NAME = GEMINI_MODEL  # default "gemini-flash-latest": Google's alias for the current recommended flash
 # model - avoids the deprecation trap where a hardcoded model name silently 404'd for the API key in use and the
 # code's fail-open path masked it for days. Always verify the actual response
 # body after changing this (a "success" HTTP status is not proof the model
@@ -133,7 +134,9 @@ def _call_with_retry(contents) -> dict | None:
 
 
 def call_gemini_json(prompt: str) -> dict | None:
-    """Sends a text prompt to Gemini and expects a pure JSON response."""
+    """Sends a text prompt to the current user's AI provider (Gemini unless they chose another) and expects JSON."""
+    if current_provider() != "gemini":
+        return get_adapter(current_provider()).call_json(prompt)
     return _call_with_retry(prompt)
 
 
@@ -161,6 +164,9 @@ def search_web(query: str) -> dict | None:
     (sources deduplicated by uri, capped at 5, in citation order), or None on
     total failure.
     """
+    if current_provider() != "gemini":
+        return get_adapter(current_provider()).search_web(query)
+
     client = _get_client()
     try:
         response = client.models.generate_content(
@@ -208,6 +214,9 @@ def call_gemini_json_with_media(prompt: str, media_bytes: bytes, mime_type: str)
     JSON. Used for voice messages (transcription and intent classification in a
     single step, with no separate transcription service) and for images and PDFs.
     """
+    if current_provider() != "gemini":
+        return get_adapter(current_provider()).call_json_with_media(prompt, media_bytes, mime_type)
+
     media_part = types.Part.from_bytes(data=media_bytes, mime_type=mime_type)
     return _call_with_retry([prompt, media_part])
 

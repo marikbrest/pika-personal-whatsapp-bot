@@ -3099,3 +3099,59 @@ def delete_old_proactive_notification_log(days: int) -> int:
         return cur.rowcount
     finally:
         conn.close()
+
+
+def get_ai_provider(user_id: int) -> str | None:
+    """The provider this user chose, or None (= use the operator's default)."""
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT provider FROM ai_preferences WHERE user_id = ?", (user_id,)).fetchone()
+        return str(row["provider"]) if row else None
+    finally:
+        conn.close()
+
+
+def set_ai_provider(user_id: int, provider: str) -> None:
+    """Callers (src/ai.py) validate the name against the provider registry."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            "INSERT INTO ai_preferences(user_id, provider) VALUES (?, ?) "
+            "ON CONFLICT(user_id) DO UPDATE SET provider = excluded.provider",
+            (user_id, provider),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def log_ai_usage(
+    provider: str, model: str, input_tokens: int, output_tokens: int,
+    cached_tokens: int = 0, web_calls: int = 0, cost_unknown: bool = False,
+) -> None:
+    conn = get_connection()
+    try:
+        conn.execute(
+            "INSERT INTO ai_usage_log(provider, model, input_tokens, output_tokens, cached_tokens, web_calls, cost_unknown) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (provider, model, input_tokens, output_tokens, cached_tokens, web_calls, int(cost_unknown)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_ai_usage_summary(provider: str | None = None) -> list[dict]:
+    """This month's usage grouped by model (optionally for one provider)."""
+    conn = get_connection()
+    try:
+        where = "created_at >= datetime('now', 'start of month')" + (" AND provider = ?" if provider else "")
+        rows = conn.execute(
+            "SELECT model, COUNT(*) AS calls, SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens, "
+            "SUM(cached_tokens) AS cached_tokens, SUM(web_calls) AS web_calls, SUM(cost_unknown) AS unknown_calls "
+            f"FROM ai_usage_log WHERE {where} GROUP BY model",
+            (provider,) if provider else (),
+        )
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()

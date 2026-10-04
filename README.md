@@ -226,6 +226,13 @@ text plainly transactional ("update about your calendar: {{1}}") and appeal via
 Business Support if it happens. Until a template is approved, sends inside the 24-hour
 window still work; only out-of-window sends fail.
 
+### AI providers (Gemini, optionally OpenAI)
+
+Gemini is the default. To let users switch to **OpenAI** set `OPENAI_API_KEY` and `OPENAI_MODEL` in `.env`; each user then says
+*"switch to OpenAI"* / *"switch to Gemini"* / *"which model am I using?"* (the choice also covers their proactive alerts).
+Memory search and image generation always use Gemini. There is no silent failover between providers, `/privacy` names OpenAI
+automatically once it is enabled, and adding another provider is documented in [docs/ADDING_A_PROVIDER.md](./docs/ADDING_A_PROVIDER.md).
+
 ### Proactive mode
 
 Off by default, enabled per user from chat: *"turn on proactive mode"*. Related commands:
@@ -245,7 +252,7 @@ and email content is sent to Gemini for classification/wording only; see
 
 Using Claude Code? Open this folder in it - [CLAUDE.md](./CLAUDE.md) walks it through installing and changing the project.
 
-Guides: [Meta/WhatsApp setup](./docs/SETUP_META.md) · [Troubleshooting](./TROUBLESHOOTING.md) · [Costs](./docs/COSTS.md) · [Privacy notes for operators](./docs/PRIVACY_FOR_OPERATORS.md) ([עברית](./docs/PRIVACY_FOR_OPERATORS.he.md)) · [Terms & privacy pages](./docs/TERMS_TEMPLATE.md) ([עברית](./docs/TERMS_TEMPLATE.he.md)) · [Adding a capability](./docs/ADDING_A_TOOL.md) · [Roadmap](./ROADMAP.md) · [Changelog](./CHANGELOG.md) · [Contributing](./CONTRIBUTING.md)
+Guides: [Meta/WhatsApp setup](./docs/SETUP_META.md) · [Troubleshooting](./TROUBLESHOOTING.md) · [Costs](./docs/COSTS.md) · [Privacy notes for operators](./docs/PRIVACY_FOR_OPERATORS.md) ([עברית](./docs/PRIVACY_FOR_OPERATORS.he.md)) · [Terms & privacy pages](./docs/TERMS_TEMPLATE.md) ([עברית](./docs/TERMS_TEMPLATE.he.md)) · [Adding a capability](./docs/ADDING_A_TOOL.md) · [AI providers](./docs/ADDING_A_PROVIDER.md) · [Roadmap](./ROADMAP.md) · [Changelog](./CHANGELOG.md) · [Contributing](./CONTRIBUTING.md)
 
 ### Google Cloud OAuth setup gotcha
 

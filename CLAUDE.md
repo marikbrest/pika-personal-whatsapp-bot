@@ -43,6 +43,8 @@ Work in this order and stop at the first failure (each step is checkable):
 - If anyone connects Gmail/Calendar/Drive, the Gemini key must come from a **billing-enabled** project (shows as "Paid" in
   AI Studio). On the free tier Google may use submitted content to improve its products, which contradicts the Limited Use
   statement on `/privacy`. `doctor.py` cannot detect the plan; ask.
+- OpenAI is optional. If the person wants it: both `OPENAI_API_KEY` and `OPENAI_MODEL` (no default model name exists), then `doctor.py`. It changes who receives
+  users' content; `/privacy` updates itself, but tell the person.
 - Google OAuth consent screen left in *Testing* expires refresh tokens every 7 days; publish it to *Production*.
 - Replies composed by the code are Hebrew (the model understands English). Do not promise English replies.
 
@@ -69,6 +71,10 @@ CI runs all three on Python 3.12/3.13/3.14 plus a Docker smoke test and CodeQL. 
 - The tools pipeline runs the tool itself and marks its envelope `tool_executed=True`; the legacy action dispatch in the pipeline
   must never run a tool a second time. Keep it that way if you touch `_classify_text_with_cutover` or the dispatch.
 - `src/intent_parser.py` is the older single-call classifier, kept only as a fallback when the tools call fails.
+- **AI providers** (`src/ai.py`): Gemini is the default, OpenAI optional (`OPENAI_API_KEY` + `OPENAI_MODEL`), chosen per user. The four LLM
+  entry points hand over to the current provider's adapter via a ContextVar. Any new background job that calls the LLM *for a user* must run
+  under `with use_user(user):` (or `@for_user`), and a new provider must follow [docs/ADDING_A_PROVIDER.md](./docs/ADDING_A_PROVIDER.md) -
+  including naming it on `/privacy`. No silent failover between providers, ever.
 
 **Conventions**
 - Match the surrounding style. Comments explain *why* (constraints, past incidents), not *what*.

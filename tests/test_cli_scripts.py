@@ -113,3 +113,20 @@ def test_doctor_reminds_about_the_gemini_tier_only_when_google_is_connected(tmp_
     with_google = _run("doctor.py", env_extra=_doctor_env(tmp_path, **google))
     assert with_google.returncode == 0, with_google.stdout
     assert "Gemini plan" in with_google.stdout and "billing enabled" in with_google.stdout
+
+
+def test_doctor_fails_when_the_default_provider_is_unusable(tmp_path):
+    unknown = _run("doctor.py", env_extra=_doctor_env(tmp_path, AI_DEFAULT_PROVIDER="claude"))
+    assert unknown.returncode == 1 and "not a known provider" in unknown.stdout
+    no_key = _run("doctor.py", env_extra=_doctor_env(tmp_path, AI_DEFAULT_PROVIDER="openai"))
+    assert no_key.returncode == 1 and "OPENAI_API_KEY / OPENAI_MODEL" in no_key.stdout
+
+
+def test_doctor_explains_that_openai_needs_a_model_name_and_prices(tmp_path):
+    key_only = _run("doctor.py", env_extra=_doctor_env(tmp_path, OPENAI_API_KEY="k"))
+    assert key_only.returncode == 0 and "OPENAI_MODEL is not" in key_only.stdout
+    unpriced = _run("doctor.py", env_extra=_doctor_env(tmp_path, OPENAI_API_KEY="k", OPENAI_MODEL="m"))
+    assert "OpenAI enabled" in unpriced.stdout and "unpriced" in unpriced.stdout
+    priced = _run("doctor.py", env_extra=_doctor_env(
+        tmp_path, OPENAI_API_KEY="k", OPENAI_MODEL="m", OPENAI_PRICE_INPUT_PER_M="1", OPENAI_PRICE_OUTPUT_PER_M="2"))
+    assert "cost report priced" in priced.stdout

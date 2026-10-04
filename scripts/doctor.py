@@ -98,6 +98,20 @@ def check_required_env() -> None:
         else:
             check(OK, name, v)
 
+    default_provider = (env("AI_DEFAULT_PROVIDER") or "gemini").lower()
+    openai_key, openai_model = env("OPENAI_API_KEY"), env("OPENAI_MODEL")
+    if default_provider not in ("gemini", "openai"):
+        check(FAIL, "AI_DEFAULT_PROVIDER", f"{default_provider!r} is not a known provider (gemini or openai)")
+    elif default_provider == "openai" and not (openai_key and openai_model):
+        check(FAIL, "AI_DEFAULT_PROVIDER", "is openai but OPENAI_API_KEY / OPENAI_MODEL are not both set")
+    elif openai_key and not openai_model:
+        check(WARN, "OpenAI", "OPENAI_API_KEY is set but OPENAI_MODEL is not - OpenAI stays disabled (there is deliberately no default model name)")
+    elif openai_key and openai_model:
+        priced = env("OPENAI_PRICE_INPUT_PER_M") and env("OPENAI_PRICE_OUTPUT_PER_M")
+        check(OK if priced else WARN, "OpenAI enabled", f"model {openai_model}; "
+              + ("cost report priced" if priced else "set OPENAI_PRICE_INPUT_PER_M and OPENAI_PRICE_OUTPUT_PER_M or its cost is reported as unpriced")
+              + ". Remember: /privacy now names OpenAI as a recipient.")
+
     base = env("PUBLIC_BASE_URL")
     if base and not base.startswith("https://"):
         check(FAIL, "PUBLIC_BASE_URL", "must start with https:// (WhatsApp shows the links to your users)")

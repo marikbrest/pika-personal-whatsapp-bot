@@ -32,3 +32,12 @@ logs/
 
 # Local backups
 backups/
+
+# Tool caches and reports
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/

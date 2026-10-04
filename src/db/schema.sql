@@ -103,3 +103,24 @@ CREATE TABLE IF NOT EXISTS user_profile_facts (
 -- because SQLite cannot add a constraint to an existing table via ALTER.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_profile_facts_user_key
     ON user_profile_facts(user_id, fact_key);
+
+-- Which AI provider a user chose (see src/ai.py). No CHECK constraint on purpose: valid names live in code, so adding a
+-- provider needs no migration. Missing row = the operator's AI_DEFAULT_PROVIDER.
+CREATE TABLE IF NOT EXISTS ai_preferences (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id),
+    provider TEXT NOT NULL
+);
+
+-- Usage of non-Gemini providers, by the model that actually answered (Gemini usage stays in api_usage_log).
+-- No user id or content on purpose: this only feeds the cost report.
+CREATE TABLE IF NOT EXISTS ai_usage_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    input_tokens INTEGER NOT NULL,
+    output_tokens INTEGER NOT NULL,
+    cached_tokens INTEGER NOT NULL DEFAULT 0,
+    web_calls INTEGER NOT NULL DEFAULT 0,
+    cost_unknown BOOLEAN NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

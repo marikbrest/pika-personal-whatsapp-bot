@@ -37,6 +37,11 @@ def classify_with_tools(contents, tools: list[Tool]) -> tuple[str, dict] | None:
     surfaces as an exception, caught below and treated as "no result" -
     callers fall back exactly as they do today when Gemini fails.
     """
+    from src.ai import current_provider, get_adapter
+
+    if current_provider() != "gemini":
+        return get_adapter(current_provider()).classify_with_tools(contents, tools)
+
     declarations = [_to_function_declaration(t) for t in tools]
     tool_names = [t.name for t in tools]
 

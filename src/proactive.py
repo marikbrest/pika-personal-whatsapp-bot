@@ -26,6 +26,7 @@ later stage once a real queue is worth building.
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
+from src.ai import for_user
 from src.config import DEFAULT_TIMEZONE, WHATSAPP_TEMPLATE_LANGUAGE
 from src.db.models import (
     count_todays_proactive_notifications,
@@ -168,6 +169,7 @@ def deliver_proactive_message(user: dict, category: str, body: str, identifier: 
     return sent
 
 
+@for_user
 def assess_situation(
     user: dict, event_description: str, category: str, calendar_events: list[dict] | None = None,
 ) -> dict | None:

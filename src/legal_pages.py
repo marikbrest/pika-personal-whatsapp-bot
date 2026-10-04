@@ -7,6 +7,7 @@ is sent where, update LEGAL_PAGES_UPDATED too. This is a template, not legal adv
 """
 from html import escape
 
+from src import config
 from src.config import ADMIN_CONTACT_EMAIL, OPERATOR_NAME
 
 LEGAL_PAGES_UPDATED = "2026-10-03"
@@ -39,6 +40,11 @@ def _operator(lang: str) -> str:
     return "(set OPERATOR_NAME in .env)" if lang == "en" else "(יש להגדיר OPERATOR_NAME בקובץ ‎.env)"
 
 
+def _openai_enabled() -> bool:
+    """The OpenAI paragraph is shown only on installs where the operator has actually turned OpenAI on."""
+    return bool(config.OPENAI_API_KEY and config.OPENAI_MODEL)
+
+
 def privacy_html() -> str:
     """English + Hebrew on one page (Google's consent screen takes a single URL)."""
     contact = _contact()
@@ -67,6 +73,9 @@ and pay for the service.</li>
 <li><b>Google (Gemini API)</b> processes your messages, the recent conversation, your saved contact names
 and facts, attachments you send, and - only when you ask, or in the background if you enable proactive
 mode (off by default) - email and calendar content. Web searches also go through Google Search.</li>
+{('<li><b>OpenAI</b>, if you choose it (say "switch to OpenAI"; it is off by default for you), receives the same kinds of content '
+'instead of Gemini for your conversations and your proactive alerts. Requests are sent with <code>store=false</code>, which is a request not to '
+'keep them, not a guarantee. Memory search and image generation always use Gemini. You can switch back at any time.</li>') if _openai_enabled() else ""}
 <li><b>Meta (WhatsApp Cloud API)</b> carries every message between you and the assistant.</li>
 <li><b>Other providers</b> receive only the minimum for a lookup you request: Ship24 (tracking numbers),
 Open-Meteo (city names, for weather), Yahoo Finance (ticker symbols).</li>
@@ -147,6 +156,9 @@ the parent or guardian may exercise the rights above on the child's behalf.</p>
 <li><b>Google (Gemini API)</b> מעבדת את ההודעות שלכם, את השיחה האחרונה, שמות אנשי קשר ועובדות
 שמורים, קבצים שצירפתם, ו - רק כשאתם מבקשים, או ברקע אם הפעלתם מצב יזום (כבוי כברירת מחדל) - תוכן
 של מיילים ויומן. חיפושים ברשת עוברים גם דרך Google Search.</li>
+{('<li><b>OpenAI</b>, אם תבחרו בו (כותבים "עבור ל-OpenAI"; כברירת מחדל הוא כבוי אצלכם), מקבל את אותם סוגי תוכן במקום Gemini '
+'עבור השיחות שלכם וההתראות היזומות. הבקשות נשלחות עם <code>store=false</code>, שהוא בקשה לא לשמור אותן ולא הבטחה. '
+'חיפוש בזיכרון ויצירת תמונות תמיד משתמשים ב-Gemini. אפשר לחזור ל-Gemini בכל עת.</li>') if _openai_enabled() else ""}
 <li><b>מטא (WhatsApp Cloud API)</b> מעבירה כל הודעה בינכם לבין העוזר.</li>
 <li><b>ספקים נוספים</b> מקבלים רק את המינימום לבדיקה שביקשתם: Ship24 (מספרי מעקב), Open-Meteo
 (שמות ערים, למזג אוויר), Yahoo Finance (סימולי מניות).</li>

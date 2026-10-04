@@ -8,7 +8,7 @@ and calendar. This is what the software actually does, so you can tell your user
 
 | Data | Sent to | When |
 | --- | --- | --- |
-| The user's message, the last ≤10 messages from the past 24h, saved contact names, saved facts | Google Gemini API | every message |
+| The user's message, the last ≤10 messages from the past 24h, saved contact names, saved facts | Google Gemini API (or **OpenAI**, for users who chose it and only if you enabled it) | every message |
 | Photos, voice notes, PDFs the user sends | Meta (download) → Gemini | when sent |
 | Message text | Gemini embeddings API | stored for semantic search ("what did we say about X") |
 | Email subjects/bodies, calendar events | Gemini | only when the user asks about mail/calendar |
@@ -18,6 +18,10 @@ and calendar. This is what the software actually does, so you can tell your user
 | City names | Open-Meteo | weather |
 | Ticker symbols | Yahoo Finance | quotes |
 | Reminder/alert text | Meta WhatsApp Cloud API | every outbound message |
+
+If you enable OpenAI (`OPENAI_API_KEY` + `OPENAI_MODEL`), those users' content goes to OpenAI instead, with `store: false` (a request, not a
+guarantee); embeddings and image generation still use Gemini. The `/privacy` page and the welcome message name OpenAI automatically.
+Check OpenAI's own data-use terms for the account your key belongs to.
 
 Google states API data is not used to train its models on paid/billing-enabled projects, but that is
 Google's policy, not something this software enforces — read the terms of the plan your key is on.
