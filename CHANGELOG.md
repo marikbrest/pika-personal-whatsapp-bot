@@ -2,6 +2,17 @@
 
 All notable changes to this project. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- **`LOCALE` setting (`he` default, `en`).** Messages the code composes itself (confirmations, reminders, calendar/email alerts, package
+  updates, daily summaries, the "what can you do" list, the privacy text, the welcome message, the Google-connected page, weather and
+  integration status lines) now come from catalogs in `src/locales/` through `t()` (`src/i18n.py`). Hebrew output is unchanged. Prompts that
+  produce user-facing text tell the model which language to answer in; the weather lookup follows `LOCALE`. Tests check that the catalogs have
+  the same keys and placeholders and that English output contains no Hebrew; `doctor.py` warns when `LOCALE` and
+  `WHATSAPP_TEMPLATE_LANGUAGE` differ. Not translated yet: the admin dashboard, tool descriptions, internal classification prompts.
+  ([#1](https://github.com/marikbrest/pika-personal-whatsapp-bot/issues/1))
+
 ## [0.4.0] - 2026-10-04
 
 ### Added

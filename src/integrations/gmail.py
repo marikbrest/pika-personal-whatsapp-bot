@@ -12,6 +12,7 @@ responsibility.
 All functions require that the user has already connected Google
 (src.integrations.google_oauth).
 """
+from src.i18n import answer_language_line, t
 import base64
 import html
 import re
@@ -98,7 +99,7 @@ def list_recent_emails(user_id: int, query: str | None = None, max_results: int 
             {
                 "id": ref["id"],
                 "from": headers.get("From", ""),
-                "subject": headers.get("Subject", "(ללא נושא)"),
+                "subject": headers.get("Subject", t("gmail.no_subject")),
                 "date": headers.get("Date", ""),
                 "snippet": full.get("snippet", ""),
             }
@@ -242,7 +243,7 @@ def list_unanswered_sent_emails(user_id: int, max_results: int = 10) -> list[dic
         unanswered.append({
             "thread_id": thread_id,
             "to": headers.get("To", ""),
-            "subject": headers.get("Subject", "(ללא נושא)"),
+            "subject": headers.get("Subject", t("gmail.no_subject")),
             "date": headers.get("Date", ""),
         })
         if len(unanswered) >= max_results:
@@ -284,7 +285,8 @@ def summarize_thread(messages: list[dict]) -> dict | None:
 {thread_text[:12000]}
 <<<סוף_השרשור>>>
 
-החזר אך ורק את אובייקט ה-JSON, בלי טקסט נוסף, בלי הסברים."""
+החזר אך ורק את אובייקט ה-JSON, בלי טקסט נוסף, בלי הסברים.
+{answer_language_line()}"""
 
     result = call_gemini_json(prompt)
     if result is None or "summary" not in result:
@@ -293,21 +295,21 @@ def summarize_thread(messages: list[dict]) -> dict | None:
 
 
 def format_thread_summary_for_reply(subject: str, summary_result: dict) -> str:
-    """Formats a thread summary + commitments as readable Hebrew text."""
-    lines = [f"📧 *{subject or '(ללא נושא)'}*", "", summary_result["summary"]]
+    """Formats a thread summary + commitments as readable text (in the current locale)."""
+    lines = [f"📧 *{subject or t('gmail.no_subject')}*", "", summary_result["summary"]]
     commitments = summary_result.get("commitments") or []
     if commitments:
         lines.append("")
-        lines.append("📌 התחייבויות/דדליינים:")
+        lines.append(t("gmail.commitments_header"))
         lines.extend(f"- {c}" for c in commitments)
     return "\n".join(lines)
 
 
 def format_unanswered_for_reply(unanswered: list[dict]) -> str:
-    """Formats the unanswered-sent-emails list as readable Hebrew text. Never
+    """Formats the unanswered-sent-emails list as readable text (in the current locale). Never
     goes through Gemini - these are facts, not guesses."""
     if not unanswered:
-        return "אין מיילים שממתינים לתשובה כרגע — כל מה ששלחת נענה."
+        return t("gmail.nothing_unanswered")
 
     lines = []
     for i, e in enumerate(unanswered, start=1):
@@ -422,7 +424,7 @@ def classify_new_emails(emails: list[dict]) -> list[dict]:
         "- other: כל השאר (ניוזלטרים, פרסומות, עדכונים רגילים וכו')\n\n"
         f"המיילים:\n{items}\n\n"
         'החזר אך ורק JSON: {"classifications": [{"id": "...", "category": "...", '
-        '"summary": "<משפט אחד קצר בעברית שמסביר למה זה חשוב - ל-other אין צורך>"}]}'
+        f'"summary": "<{t("gmail.classify_summary_spec")}>"}}]}}'
     )
     result = call_gemini_json(prompt)
     if not result:
@@ -434,10 +436,10 @@ def classify_new_emails(emails: list[dict]) -> list[dict]:
 
 
 def format_emails_for_reply(emails: list[dict]) -> str:
-    """Formats a list of emails as readable Hebrew text. Never goes through
+    """Formats a list of emails as readable text (in the current locale). Never goes through
     Gemini - these are facts, not guesses."""
     if not emails:
-        return "אין מיילים תואמים."
+        return t("gmail.no_matching")
 
     lines = []
     for i, e in enumerate(emails, start=1):

@@ -53,9 +53,14 @@ def get_box_status() -> dict:
     }
 
 
+from src.i18n import t
+
+
 def format_status_line(status: dict) -> str:
     """One line summarizing Firewalla status, meant to be appended to the
     Zabbix problems reply rather than sent standalone."""
-    online_text = "מקוון ✅" if status["online"] else "לא מקוון ❌"
-    alarms_text = f"{status['active_alarm_count']} התראות פעילות" if status["active_alarm_count"] else "אין התראות פעילות"
-    return f"🛡️ Firewalla ({status['name']}): {online_text}, {alarms_text}"
+    online_text = t("firewalla.online") if status["online"] else t("firewalla.offline")
+    alarms_text = (
+        t("firewalla.alarms", count=status["active_alarm_count"]) if status["active_alarm_count"] else t("firewalla.no_alarms")
+    )
+    return t("firewalla.status_line", name=status["name"], online=online_text, alarms=alarms_text)

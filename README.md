@@ -156,7 +156,7 @@ you> remind me tomorrow at 9 to call the doctor
 
 <p align="center"><img src="docs/demo.svg" alt="Animated terminal session: setting a reminder, adding to and reading a shopping list, asking for the weather, and asking what Pika can do" width="720"></p>
 
-<p align="center"><sub>A real <code>scripts/chat.py</code> session against Gemini (output recorded as-is, then animated). Note that replies the code composes itself are still Hebrew even for English input — <a href="https://github.com/marikbrest/pika-personal-whatsapp-bot/issues/1">help wanted</a>.</sub></p>
+<p align="center"><sub>A real <code>scripts/chat.py</code> session against Gemini (output recorded as-is, then animated). Replies the code composes itself follow <code>LOCALE</code> (<code>he</code> or <code>en</code>); this recording used the Hebrew default.</sub></p>
 
 It uses a throwaway database and prints what the bot *would* have sent over WhatsApp.
 (Calendar/Gmail/Drive need a real Google OAuth setup and are unavailable here.)
@@ -536,11 +536,29 @@ header, which is only safe if the dashboard is reachable *exclusively* through C
 
 ## Language
 
-Pika is **Hebrew-first**. It understands English (and Gemini-generated replies follow the
-language you write in), but the messages the code composes itself — confirmations, lists,
-errors — are Hebrew. Making those translatable is the top item on the
-[roadmap](./ROADMAP.md) ([#1](https://github.com/marikbrest/pika-personal-whatsapp-bot/issues/1)).
-Code comments and documentation are in English.
+Pika is **Hebrew-first** and understands English. The messages the code composes itself —
+confirmations, reminders, alerts, summaries, the "what can you do" list, the privacy text, the
+page shown after connecting Google — come from catalogs, in the language set by `LOCALE` in `.env`:
+
+```
+LOCALE=he    # default
+LOCALE=en
+```
+
+- Catalogs are plain dicts: `src/locales/he.py` (the reference) and `src/locales/en.py`. Code calls
+  `t("key", **params)` from `src/i18n.py`. A key missing from another catalog falls back to Hebrew, and
+  `tests/test_i18n.py` fails if the catalogs drift apart (different keys or `{placeholders}`).
+- Prompts that produce text for the user (summaries, search answers, proactive wording) tell the model
+  which language to answer in. The weather lookup follows `LOCALE` too.
+- `LOCALE` does **not** change `WHATSAPP_TEMPLATE_LANGUAGE`: messages sent outside the 24-hour window use your
+  approved templates, so approve them in the same language and set both. `scripts/doctor.py` warns when they differ.
+- Package statuses stored in the database stay fixed strings whatever the locale; only what the user sees is translated.
+- **Not translated yet** (follow-ups welcome): the admin dashboard pages (`src/admin_handler.py`), tool descriptions in
+  `src/tools/`, the internal Hebrew prompts used for classification, and the Hebrew phrases matched by the provider-switch
+  command in `src/ai.py`. To add a language, create `src/locales/<code>.py` with the same keys and add the code to
+  `SUPPORTED_LOCALES` in `src/i18n.py`.
+
+Code comments and documentation are in English. ([#1](https://github.com/marikbrest/pika-personal-whatsapp-bot/issues/1))
 
 ## Customizing for your own family
 

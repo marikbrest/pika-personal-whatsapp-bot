@@ -9,6 +9,7 @@ call tools on its own - it only turns text/media into one JSON object or one val
 - no prompt, response body, key or exception message is ever logged;
 - tool arguments are validated against the tool's own schema before they can reach a handler.
 """
+from src.i18n import language_name_english
 import base64
 import json
 
@@ -186,7 +187,7 @@ def call_json_with_media(prompt: str, media_bytes: bytes, mime_type: str):
 
 def search_web(query: str):
     response = _responses(query, tools=[{"type": "web_search"}], tool_choice="required",
-                          instructions="Answer concisely in Hebrew. Cite sources.")
+                          instructions=f"Answer concisely in {language_name_english()}. Cite sources.")
     if not response or not _text(response):
         return None
     sources: dict[str, dict] = {}

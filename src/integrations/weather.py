@@ -11,33 +11,15 @@ import httpx
 # module-level httpx.get() helper opens a new TCP+TLS connection every call.
 _client = httpx.Client(timeout=10.0, limits=httpx.Limits(max_keepalive_connections=5, keepalive_expiry=120.0))
 
+from src.i18n import current_locale, t
+
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 
 # Partial mapping of WMO Weather Codes (the standard Open-Meteo uses) to
 # Hebrew. Full list: https://open-meteo.com/en/docs - not every code matters
 # for a personal bot.
-_WEATHER_CODES = {
-    0: "בהיר",
-    1: "בהיר בעיקר",
-    2: "מעונן חלקית",
-    3: "מעונן",
-    45: "ערפל",
-    48: "ערפל קפוא",
-    51: "טפטוף קל",
-    53: "טפטוף",
-    55: "טפטוף חזק",
-    61: "גשם קל",
-    63: "גשם",
-    65: "גשם חזק",
-    71: "שלג קל",
-    73: "שלג",
-    75: "שלג כבד",
-    80: "ממטרים קלים",
-    81: "ממטרים",
-    82: "ממטרים חזקים",
-    95: "סופת רעמים",
-}
+_WEATHER_CODES = frozenset([0, 1, 2, 3, 45, 48, 51, 53, 55, 61, 63, 65, 71, 73, 75, 80, 81, 82, 95])  # codes with a catalog entry: weather.code.<n>
 
 
 class LocationNotFoundError(Exception):
@@ -45,13 +27,13 @@ class LocationNotFoundError(Exception):
 
 
 def _describe_code(code: int) -> str:
-    return _WEATHER_CODES.get(code, f"קוד מזג אוויר {code}")
+    return t(f"weather.code.{code}") if code in _WEATHER_CODES else t("weather.code_unknown", code=code)
 
 
 def geocode(location: str) -> tuple[float, float, str]:
     """Returns (latitude, longitude, canonical name) for a city name.
     Raises LocationNotFoundError if not found."""
-    resp = _client.get(GEOCODING_URL, params={"name": location, "count": 1, "language": "he"})
+    resp = _client.get(GEOCODING_URL, params={"name": location, "count": 1, "language": current_locale()})
     resp.raise_for_status()
     results = resp.json().get("results")
     if not results:
@@ -130,30 +112,28 @@ def get_daily_forecast(location: str, num_days: int) -> dict:
 
 
 def format_weather_for_reply(weather: dict) -> str:
-    """Formats the get_current_weather result as readable Hebrew text.
+    """Formats the get_current_weather result as readable text (in the current locale).
     Never goes through Gemini - this is a fact, not a guess."""
-    return (
-        f"🌤️ מזג אוויר ב{weather['location']}:\n"
-        f"{weather['description']}, {weather['temperature']:.0f}°C "
-        f"(מרגיש כמו {weather['feels_like']:.0f}°C)\n"
-        f"💨 רוח: {weather['wind_speed']:.0f} קמ\"ש"
+    return t(
+        "weather.current", location=weather["location"], description=weather["description"],
+        temperature=weather["temperature"], feels_like=weather["feels_like"], wind_speed=weather["wind_speed"],
     )
 
 
-_HEBREW_WEEKDAYS = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
+_WEEKDAY_CODES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]  # date.weekday() order
 
 
 def _format_day_line(day: dict, include_date: bool = True) -> str:
     date = datetime.fromisoformat(day["date"])
-    weekday = _HEBREW_WEEKDAYS[date.weekday()]
-    label = f"יום {weekday} ({date.strftime('%d/%m')})" if include_date else "היום"
-    rain = f", {day['precipitation_probability']:.0f}% סיכוי גשם" if day["precipitation_probability"] else ""
+    weekday = t(f"day.{_WEEKDAY_CODES[date.weekday()]}")
+    label = t("weather.day_label", weekday=weekday, date=date.strftime("%d/%m")) if include_date else t("weather.today")
+    rain = t("weather.rain_chance", percent=day["precipitation_probability"]) if day["precipitation_probability"] else ""
     return f"{label}: {day['description']}, {day['temp_min']:.0f}-{day['temp_max']:.0f}°C{rain}"
 
 
 def format_forecast_for_reply(forecast: dict, day_offset: int, is_range: bool) -> str:
     """
-    Formats a get_daily_forecast result as readable Hebrew text.
+    Formats a get_daily_forecast result as readable text (in the current locale).
     day_offset: which day the display starts at (0 = today).
     is_range: whether to show a range of days (e.g. "this week") or a single
     day (e.g. "tomorrow").
@@ -162,10 +142,10 @@ def format_forecast_for_reply(forecast: dict, day_offset: int, is_range: bool) -
     days = forecast["days"][day_offset:]
 
     if not days:
-        return f"אין לי תחזית זמינה כל כך רחוק קדימה עבור {location}."
+        return t("weather.no_forecast", location=location)
 
     if not is_range:
-        return f"🌤️ תחזית ל{location} — {_format_day_line(days[0], include_date=(day_offset > 0))}"
+        return t("weather.forecast_single", location=location, day=_format_day_line(days[0], include_date=(day_offset > 0)))
 
     lines = "\n".join(_format_day_line(d) for d in days)
-    return f"🌤️ תחזית ל{location}:\n{lines}"
+    return t("weather.forecast_range", location=location, lines=lines)

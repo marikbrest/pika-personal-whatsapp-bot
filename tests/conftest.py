@@ -64,6 +64,7 @@ for _optional_integration_key in (
 ):
     os.environ[_optional_integration_key] = ""
 os.environ["AI_DEFAULT_PROVIDER"] = "gemini"
+os.environ["LOCALE"] = "he"  # tests assert on the reference (Hebrew) text, whatever the real .env says
 
 # A second, independent safety net for the same incident: any test that
 # forgets to request the db_path fixture must still be structurally

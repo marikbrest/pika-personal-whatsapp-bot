@@ -63,8 +63,11 @@ def get_network_status() -> dict:
     return {"client_count": client_count, "internet_up": internet_up}
 
 
+from src.i18n import t
+
+
 def format_status_line(status: dict) -> str:
     """One line summarizing UniFi status, meant to be appended to the Zabbix
     problems reply rather than sent standalone."""
-    internet_text = "תקין ✅" if status["internet_up"] else "לא זמין ❌"
-    return f"🌐 UniFi: {status['client_count']} מכשירים מחוברים, אינטרנט {internet_text}"
+    internet_text = t("unifi.internet_up") if status["internet_up"] else t("unifi.internet_down")
+    return t("unifi.status_line", count=status["client_count"], internet=internet_text)

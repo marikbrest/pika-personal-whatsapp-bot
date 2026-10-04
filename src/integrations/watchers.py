@@ -13,6 +13,8 @@ A checker returns None to mean "could not determine the state this time"
 never as "nothing changed" and never as a reason to notify.
 """
 
+from src.i18n import t
+
 
 def check_email_reply(user_id: int, target: str) -> str | None:
     """
@@ -55,11 +57,28 @@ CHECKERS = {
 # reliably reach someone outside the 24h window, a template submission is
 # the next step, not a code change here.
 NOTIFY_MESSAGES = {
-    "email_reply": lambda label: f"📬 קיבלת תשובה במייל: {label}",
-    "web_page": lambda label: f"🔔 העמוד שאתה עוקב אחריו השתנה: {label}",
+    "email_reply": lambda label: t("watch.notify.email_reply", label=label),
+    "web_page": lambda label: t("watch.notify.web_page", label=label),
 }
 
-WATCH_TYPE_LABELS = {
-    "email_reply": "📧 תשובה במייל",
-    "web_page": "🌐 עמוד אינטרנט",
-}
+
+class _LocalizedLabels:
+    """A read-only mapping whose values are looked up in the catalog on every access, so LOCALE is honoured per call."""
+
+    def __init__(self, keys: dict[str, str]):
+        self._keys = keys
+
+    def get(self, name, default=None):
+        return t(self._keys[name]) if name in self._keys else default
+
+    def __getitem__(self, name):
+        return t(self._keys[name])
+
+    def keys(self):
+        return self._keys.keys()
+
+
+WATCH_TYPE_LABELS = _LocalizedLabels({
+    "email_reply": "watch.type.email_reply",
+    "web_page": "watch.type.web_page",
+})

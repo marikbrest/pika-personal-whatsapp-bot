@@ -114,16 +114,19 @@ def get_active_problems() -> list[dict]:
     return problems
 
 
+from src.i18n import t
+
+
 def format_problems_for_reply(problems: list[dict], timezone_name: str) -> str:
-    """Formats the get_active_problems result as readable Hebrew text. Never
+    """Formats the get_active_problems result as readable text (in the current locale). Never
     goes through Gemini - this is a fact, not a guess."""
     if not problems:
-        return "✅ הכל תקין, אין בעיות פתוחות בזאביקס כרגע."
+        return t("zabbix.all_clear")
 
     tz = ZoneInfo(timezone_name or DEFAULT_TIMEZONE)
-    lines = ["📡 מצב הניטור (Zabbix):"]
+    lines = [t("zabbix.header")]
     for p in problems:
         emoji = _SEVERITY_EMOJI.get(p["severity"], "⚪")
         since_local = p["since"].astimezone(tz)
-        lines.append(f"{emoji} {p['host']}: {p['description']} (מ-{since_local.strftime('%d/%m %H:%M')})")
+        lines.append(t("zabbix.problem", emoji=emoji, host=p["host"], description=p["description"], since=since_local.strftime("%d/%m %H:%M")))
     return "\n".join(lines)

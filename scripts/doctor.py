@@ -112,6 +112,17 @@ def check_required_env() -> None:
               + ("cost report priced" if priced else "set OPENAI_PRICE_INPUT_PER_M and OPENAI_PRICE_OUTPUT_PER_M or its cost is reported as unpriced")
               + ". Remember: /privacy now names OpenAI as a recipient.")
 
+    locale = (env("LOCALE") or "he").lower()
+    template_language = (env("WHATSAPP_TEMPLATE_LANGUAGE") or "he").lower()
+    if locale not in ("he", "en"):
+        check(FAIL, "LOCALE", f"{locale!r} is not a supported language (he or en)")
+    elif not template_language.startswith(locale):
+        check(WARN, "LOCALE vs WHATSAPP_TEMPLATE_LANGUAGE",
+              f"LOCALE={locale} but your templates are set to {template_language!r}: messages sent outside the 24-hour window "
+              "use the templates, so approve them in the same language (or set the two to match)")
+    else:
+        check(OK, "LOCALE", locale)
+
     base = env("PUBLIC_BASE_URL")
     if base and not base.startswith("https://"):
         check(FAIL, "PUBLIC_BASE_URL", "must start with https:// (WhatsApp shows the links to your users)")

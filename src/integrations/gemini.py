@@ -13,6 +13,7 @@ PRD 12.3 - retry policy: if Gemini returns malformed JSON, retry once. If the
 error is a rate limit / quota error, do not retry immediately (that would only
 compound the problem).
 """
+from src.i18n import language_name_english
 import json
 
 from google import genai
@@ -176,7 +177,7 @@ def search_web(query: str) -> dict | None:
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
                 # The classifier may rephrase the query in English; the reply
                 # still has to come back in the user's language.
-                system_instruction="Answer in Hebrew, concisely, as a WhatsApp message.",
+                system_instruction=f"Answer in {language_name_english()}, concisely, as a WhatsApp message.",
                 tools=[types.Tool(google_search=types.GoogleSearch())],
                 thinking_config=types.ThinkingConfig(thinking_level="low"),
                 max_output_tokens=2048,

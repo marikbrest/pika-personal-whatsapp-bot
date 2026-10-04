@@ -12,13 +12,17 @@ from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from src.i18n import t
+
 from src.config import DEFAULT_TIMEZONE, WHATSAPP_TEMPLATE_LANGUAGE
 
 _WEEKDAY_NAMES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-_HEBREW_DAY_NAMES = {
-    "mon": "שני", "tue": "שלישי", "wed": "רביעי", "thu": "חמישי",
-    "fri": "שישי", "sat": "שבת", "sun": "ראשון",
-}
+
+
+def day_name(code: str) -> str:
+    """Localized weekday name for a _WEEKDAY_NAMES code."""
+    return t(f"day.{code}")
+
 
 # WhatsApp Cloud API language code for the Hebrew templates submitted in
 # WhatsApp Manager (reminder_notification, package_status_update,
@@ -41,21 +45,21 @@ def format_schedule_description(
     schedule_type: str, schedule_time: str, schedule_days: str | None, timezone_name: str
 ) -> str:
     """
-    Describes a reminder in readable Hebrew, for the "what do I have scheduled"
+    Describes a reminder in readable text (in the current locale), for the "what do I have scheduled"
     listing. Unrelated to computing next_trigger_at itself - this is purely a
     human-readable description.
     """
     if schedule_type == "once":
         local_dt = datetime.fromisoformat(schedule_time).replace(tzinfo=ZoneInfo(timezone_name or DEFAULT_TIMEZONE))
-        return f"חד-פעמי, {local_dt.strftime('%d/%m ב-%H:%M')}"
+        return t("schedule.once", when=local_dt.strftime(t("schedule.once_when_format")))
 
     if schedule_type == "daily":
-        return f"כל יום ב-{schedule_time}"
+        return t("schedule.daily", time=schedule_time)
 
     if schedule_type == "weekly":
         days = [d.strip().lower() for d in (schedule_days or "").split(",") if d.strip()]
-        days_hebrew = ", ".join(_HEBREW_DAY_NAMES.get(d, d) for d in days)
-        return f"כל {days_hebrew} ב-{schedule_time}"
+        days_text = ", ".join(day_name(d) if d in _WEEKDAY_NAMES else d for d in days)
+        return t("schedule.weekly", days=days_text, time=schedule_time)
 
     return f"{schedule_type} {schedule_time}"
 
@@ -139,11 +143,7 @@ def notify_reminder_delivery_failure(recipient_name: str, content: str, owner_nu
     from src.db.models import list_reminder_delivery_failure_notification_numbers
     from src.integrations.whatsapp import send_text_message
 
-    notice = (
-        f"⚠️ לא הצלחתי למסור את התזכורת ל-{recipient_name}: \"{content}\". "
-        f"כנראה כי הוא/היא לא שלחו הודעה לבוט ב-24 השעות האחרונות "
-        f"(מגבלה של WhatsApp). כדאי לבקש מהם לשלוח לבוט הודעה כלשהי."
-    )
+    notice = t("reminder.delivery_failed_notice", recipient=recipient_name, content=content)
     recipients = {owner_number, *list_reminder_delivery_failure_notification_numbers()}
     for number in recipients:
         send_text_message(to=number, body=notice)
@@ -187,16 +187,16 @@ def check_and_send_reminders() -> None:
             # kid_facing_role of their own).
             owner_name = reminders[0]["owner_kid_facing_role"] or reminders[0]["owner_display_name"]
             is_for_contact = reminders[0]["recipient_name"] is not None
-            prefix = f" מ-{owner_name}" if (is_for_contact and owner_name) else ""
+            prefix = t("reminder.from_owner", owner=owner_name) if (is_for_contact and owner_name) else ""
 
             if len(reminders) == 1:
-                body = f"🔔 תזכורת{prefix}: {reminders[0]['content']}"
+                body = t("reminder.single", prefix=prefix, content=reminders[0]["content"])
                 template_content = f"{reminders[0]['content']}{prefix}"
             else:
                 lines = "\n".join(f"- {r['content']}" for r in reminders)
-                body = f"🔔 יש לך{prefix} {len(reminders)} תזכורות:\n{lines}"
+                body = t("reminder.multi", prefix=prefix, count=len(reminders), lines=lines)
                 joined = "; ".join(r["content"] for r in reminders)
-                template_content = f"{len(reminders)} תזכורות{prefix}: {joined}"
+                template_content = t("reminder.multi_template", count=len(reminders), prefix=prefix, joined=joined)
 
             # reminder_notification is a pre-approved Utility template (see
             # WHATSAPP_ACCESS_TOKEN / WhatsApp Manager) - it lets a reminder
@@ -245,7 +245,7 @@ def check_and_send_reminders() -> None:
                     # spam the logs and delay others. Instead: notify the
                     # owner (and co-parent) and advance/deactivate the reminder.
                     notify_reminder_delivery_failure(recipient, template_content, owner_number)
-                    save_outgoing_message(reminders[0]["user_id"], f"⚠️ לא הצלחתי למסור את התזכורת ל-{recipient}.")
+                    save_outgoing_message(reminders[0]["user_id"], t("reminder.delivery_failed_logged", recipient=recipient))
                     for r in reminders:
                         if r["schedule_type"] == "once":
                             deactivate_reminder(r["id"])
@@ -297,6 +297,20 @@ _PACKAGE_CHECK_INTERVAL = timedelta(hours=24)
 # days of the shipping email, so we keep trying for a week and then stop.
 _UNKNOWN_PACKAGE_STATUS = "לא ידוע"
 _UNKNOWN_GIVE_UP_AFTER = timedelta(days=7)
+
+# The two sentinels above are STORED in packages.last_status and compared
+# against it, so they stay fixed strings whatever LOCALE is - only what the
+# user is shown is localized.
+_PACKAGE_STATUS_LABEL_KEYS = {
+    _ABANDONED_PACKAGE_STATUS: "package.status_not_found",
+    _UNKNOWN_PACKAGE_STATUS: "package.status_unknown",
+}
+
+
+def package_status_label(status: str | None) -> str | None:
+    """A stored package status as shown to the user (carrier milestones pass through)."""
+    key = _PACKAGE_STATUS_LABEL_KEYS.get(status)
+    return t(key) if key else status
 
 
 def _has_never_registered(pkg, now_utc) -> bool:
@@ -364,12 +378,7 @@ def check_and_notify_package_changes() -> None:
             update_package_status(pkg["id"], _ABANDONED_PACKAGE_STATUS)
             send_text_message(
                 to=pkg["whatsapp_number"],
-                body=(
-                    f"📦 הפסקתי לעקוב אחרי {label}\n"
-                    f"אף חברת שילוח לא רשמה את מספר המעקב הזה במשך שבוע, "
-                    f"אז כנראה שהוא שגוי או שהחבילה עוד לא נמסרה לשילוח. "
-                    f"אם תשלח לי אותו שוב אתחיל לעקוב מחדש."
-                ),
+                body=t("package.abandoned", label=label),
             )
             continue
         try:
@@ -388,7 +397,10 @@ def check_and_notify_package_changes() -> None:
 
         if old_status is not None and new_status != old_status:
             label = pkg["description"] or pkg["tracking_number"]
-            body = f"📦 עדכון משלוח: {label}\nהסטטוס השתנה מ-{old_status} ל-{new_status}"
+            body = t(
+                "package.update", label=label,
+                old=package_status_label(old_status), new=package_status_label(new_status),
+            )
             # package_status_update is a pre-approved Utility template -
             # falls back to it automatically when the recipient is outside
             # the 24h window; see check_and_send_reminders for the same
@@ -450,11 +462,7 @@ def check_google_token_health() -> None:
             _token_alert_sent_on[user["id"]] = today
             try:
                 auth_url = build_auth_url(user["id"])
-                body = (
-                    "⚠️ החיבור לחשבון Google שלך פג ויש להתחבר מחדש.\n"
-                    "עד אז היומן והמייל לא יעבדו. קישור לחיבור מחדש:\n"
-                    f"{auth_url}"
-                )
+                body = t("google.reconnect_alert", url=auth_url)
                 # google_reconnect_needed is a pre-approved Utility template -
                 # same fallback pattern as check_and_send_reminders. This alert
                 # exists specifically because the user may not have messaged
@@ -560,7 +568,7 @@ def check_and_send_kids_schedule_reminders() -> None:
                 continue
 
             blocks = [f"*{r['kid_name']}:*\n{r['content']}" for r in rows]
-            body = f"🎒 מערכת ליום {_HEBREW_DAY_NAMES[day_of_week]} (מחר):\n\n" + "\n\n".join(blocks)
+            body = t("kids.schedule_tomorrow", day=day_name(day_of_week), blocks="\n\n".join(blocks))
             send_text_message(to=user["whatsapp_number"], body=body)
         except Exception as e:
             print(f"[scheduler] kids schedule reminder failed for user {user['user_id']}: {e}")
@@ -656,10 +664,7 @@ def check_and_send_daily_meetings_summaries() -> None:
                 # was investigated, on 2026-09-17/18).
                 print(f"[scheduler] daily meetings summary: Google auth failed twice for user {user['user_id']} ({type(e).__name__}): {e}")
                 auth_url = build_auth_url(user["user_id"])
-                body = (
-                    "⚠️ סנכרון יומן גוגל נכשל - לא הצלחתי לשלוח לך את סיכום הפגישות היום כי "
-                    f"החיבור שלך לגוגל לא פעיל.\nאפשר להתחבר מחדש כאן: {auth_url}"
-                )
+                body = t("meetings.sync_failed", url=auth_url)
                 send_text_message(to=user["whatsapp_number"], body=body)
                 mark_daily_meetings_summary_sent(user["user_id"], today_str)
                 continue
@@ -667,7 +672,8 @@ def check_and_send_daily_meetings_summaries() -> None:
             if calendar_text is None:
                 continue  # some other, non-auth failure - retry at the next poll, not marked as sent
 
-            greeting = f"☀️ בוקר טוב{', ' + user['display_name'] if user['display_name'] else ''}!"
+            name_suffix = t("greeting.name_suffix", name=user["display_name"]) if user["display_name"] else ""
+            greeting = t("greeting.morning", name=name_suffix)
             send_text_message(to=user["whatsapp_number"], body=f"{greeting}\n\n{calendar_text}")
             mark_daily_meetings_summary_sent(user["user_id"], today_str)
         except Exception as e:
@@ -714,26 +720,16 @@ def _generate_creative_reminder_text(content: str, recipient_name: str, owner_na
     """
     from src.integrations.gemini import call_gemini_json
 
-    prompt = (
-        "אתה כותב הודעת תזכורת קצרה (משפט אחד, לכל היותר שניים) בעברית מהורה לילד/ה, "
-        "מזכיר/ה לו/ה לעשות משהו שכבר ביקשו ממנו/ה ועדיין לא בוצע. "
-        "הטון: הורה קליל, קצת מצחיק/עוקצני (\"נו, מה קורה עם...\", \"עדיין מחכה ל...\"), "
-        "עם אימוג'ים, קצת \"בוטה\"/ישיר אבל בשום אופן לא פוגעני או מעליב. "
-        "תהיה/י יצירתי/ת - נסח/י אחרת בכל פעם, לא ניסוח שגרתי קבוע.\n"
-        f'המשימה שהתבקש/ה לעשות: "{content}"\n'
-        f"שם הילד/ה: {recipient_name}\n"
-        f"שם ההורה ששלח את התזכורת: {owner_name}\n"
-        'החזר אך ורק JSON בפורמט: {"message": "..."}'
-    )
+    prompt = t("nag.prompt", content=content, recipient=recipient_name, owner=owner_name)
     try:
         result = call_gemini_json(prompt)
         message = (result or {}).get("message")
         if message:
-            return f"{message}\n\nכשעשית, תגיד לי \"עשיתי\" 👍"
+            return message + t("nag.confirm_suffix")
     except Exception as e:
         print(f"[scheduler] creative reminder text generation failed (non-fatal): {e}")
 
-    return f"🔔 תזכורת מ-{owner_name}: {content}\n\nכשעשית, תגיד לי \"עשיתי\" 👍"
+    return t("nag.plain", owner=owner_name, content=content) + t("nag.confirm_suffix")
 
 
 def check_and_send_persistent_reminders() -> None:
@@ -783,9 +779,9 @@ def check_and_send_persistent_reminders() -> None:
     for row in get_due_persistent_reminders(now_utc.isoformat()):
         try:
             if row["attempts_sent"] >= row["max_attempts"]:
-                body = (
-                    f"⚠️ {row['recipient_name']} עדיין לא אישר/ה ביצוע של: \"{row['content']}\" "
-                    f"אחרי {row['max_attempts']} תזכורות. כדאי לבדוק בעצמך."
+                body = t(
+                    "nag.escalation", recipient=row["recipient_name"],
+                    content=row["content"], attempts=row["max_attempts"],
                 )
                 send_text_message(to=row["owner_whatsapp_number"], body=body)
                 if row["schedule_type"] == "once":
@@ -819,7 +815,7 @@ def check_and_send_persistent_reminders() -> None:
             # creative body itself: WhatsApp rejects template parameters
             # containing newlines, and the creative text always has them
             # (the confirmation instruction is appended on its own line).
-            template_content = f"{row['content']} מ-{owner_kid_facing_name}"
+            template_content = t("reminder.kid_template_content", content=row["content"], owner=owner_kid_facing_name)
             recipient_name = row["recipient_name"]
             owner_number = row["owner_whatsapp_number"]
             sent = send_text_or_template(
@@ -914,10 +910,7 @@ def check_and_send_cost_report() -> None:
     try:
         send_text_message(
             to=OWNER_WHATSAPP_NUMBER,
-            body=(
-                f"🚨 עברת את תקציב העלות החודשי שקבעת (${COST_ALERT_BUDGET_USD:.2f}) - "
-                f"העלות עד כה החודש: ${month_cost:.2f}."
-            ),
+            body=t("cost.budget_exceeded", budget=COST_ALERT_BUDGET_USD, cost=month_cost),
         )
         mark_budget_alert_sent()
     except Exception as e:
@@ -997,28 +990,28 @@ def check_and_monitor_calendar_changes() -> None:
                 prev = previous.get(event_id)
                 if not first_run_for_user:
                     if prev is None:
-                        fallback = f"📅 נוסף אירוע חדש ביומן: {event['summary']} ({event['start']})"
+                        fields = {"summary": event["summary"], "start": event["start"], "end": event["end"]}
                         assess_and_deliver(
                             user, "calendar_new",
-                            f"אירוע חדש נוסף ליומן (ייתכן שמישהו אחר הוסיף אותו): "
-                            f"\"{event['summary']}\" ב-{event['start']} עד {event['end']}",
-                            fallback, calendar_events=events,
+                            t("calendar.new.description", **fields),
+                            t("calendar.new.fallback", **fields), calendar_events=events,
                         )
                     elif prev["start"] != event["start"] or prev["end"] != event["end"]:
-                        fallback = f"📅 אירוע הוזז: {event['summary']} - עכשיו ב-{event['start']}"
+                        fields = {
+                            "summary": event["summary"], "old_start": prev["start"],
+                            "start": event["start"], "end": event["end"],
+                        }
                         assess_and_deliver(
                             user, "calendar_moved",
-                            f"אירוע הוזז: \"{event['summary']}\" - היה ב-{prev['start']}, "
-                            f"עכשיו ב-{event['start']} עד {event['end']}",
-                            fallback, calendar_events=events,
+                            t("calendar.moved.description", **fields),
+                            t("calendar.moved.fallback", **fields), calendar_events=events,
                         )
                     elif prev["summary"] != event["summary"]:
-                        fallback = f'📅 אירוע עודכן: "{prev["summary"]}" ← "{event["summary"]}"'
+                        fields = {"old": prev["summary"], "new": event["summary"], "start": event["start"]}
                         assess_and_deliver(
                             user, "calendar_renamed",
-                            f'אירוע עודכן: הכותרת השתנתה מ-"{prev["summary"]}" ל-"{event["summary"]}", '
-                            f"בשעה {event['start']}",
-                            fallback, calendar_events=events,
+                            t("calendar.renamed.description", **fields),
+                            t("calendar.renamed.fallback", **fields), calendar_events=events,
                         )
                 upsert_calendar_snapshot(user["id"], event_id, event["summary"], event["start"], event["end"])
 
@@ -1048,11 +1041,11 @@ def check_and_monitor_calendar_changes() -> None:
                         delete_calendar_snapshot_event(user["id"], event_id)  # aged out, not cancelled - prune quietly
                         continue
 
-                    fallback = f"📅 אירוע בוטל: {prev['summary']} ({prev['start']})"
+                    fields = {"summary": prev["summary"], "start": prev["start"]}
                     assess_and_deliver(
                         user, "calendar_cancelled",
-                        f"אירוע בוטל/הוסר מהיומן: \"{prev['summary']}\" שהיה אמור להתקיים ב-{prev['start']}",
-                        fallback, calendar_events=events,
+                        t("calendar.cancelled.description", **fields),
+                        t("calendar.cancelled.fallback", **fields), calendar_events=events,
                     )
                     delete_calendar_snapshot_event(user["id"], event_id)
         except Exception as e:
@@ -1172,10 +1165,10 @@ def check_and_monitor_new_emails() -> None:
                 continue
             sender_email = parseaddr(email["from"])[1]
             summary = c.get("summary") or email["subject"]
-            fallback = f"{category_emoji[category]} {summary}\n(ממייל: {email['subject']})"
-            event_description = (
-                f"מייל חדש מ-{sender_email}, נושא: \"{email['subject']}\", סווג כ-{category}. "
-                f"תקציר: {summary}"
+            fallback = t("email.fallback", emoji=category_emoji[category], summary=summary, subject=email["subject"])
+            event_description = t(
+                "email.description", sender=sender_email, subject=email["subject"],
+                category=category, summary=summary,
             )
             try:
                 assess_and_deliver(
@@ -1248,12 +1241,13 @@ def check_and_send_meeting_prebriefs() -> None:
             if not event_id or is_meeting_prebriefed(user["id"], event_id):
                 continue
 
-            location_line = f", במיקום {event['location']}" if event.get("location") else ""
-            fallback = f"📅 בעוד {lead_minutes} דקות: {event['summary']} ({event['start']}){location_line}"
-            event_description = (
-                f"פגישה מתחילה בעוד {lead_minutes} דקות: \"{event['summary']}\" בשעה {event['start']}"
-                f"{location_line}"
-            )
+            location_line = t("prebrief.location", location=event["location"]) if event.get("location") else ""
+            fields = {
+                "minutes": lead_minutes, "summary": event["summary"],
+                "start": event["start"], "location_line": location_line,
+            }
+            fallback = t("prebrief.fallback", **fields)
+            event_description = t("prebrief.description", **fields)
             try:
                 assess_and_deliver(
                     user, "meeting_prebrief", event_description, fallback, calendar_events=events,
@@ -1329,7 +1323,7 @@ def check_and_deliver_deferred_notifications() -> None:
                 body = fresh[0]["body"]
             else:
                 lines = "\n".join(f"• {row['body']}" for row in fresh)
-                body = f"עדכונים שחיכו (הגיע הזמן הפנוי):\n\n{lines}"
+                body = t("deferred.digest", lines=lines)
 
             sent = deliver_proactive_message(user, "deferred_digest", body)
             if sent:

@@ -43,6 +43,11 @@ DEFAULT_TIMEZONE = os.getenv("DEFAULT_TIMEZONE", "Asia/Jerusalem")
 DEFAULT_LOCATION = os.getenv("DEFAULT_LOCATION", "Tel Aviv")
 # Language code your WhatsApp message templates were approved in (e.g. "he", "en", "en_US").
 WHATSAPP_TEMPLATE_LANGUAGE = os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "he")
+# Language of the messages the bot's own code composes ("he" or "en"); see src/i18n.py. Independent of the template
+# language above: set both when you switch (the templates must be approved in the language you send them in).
+LOCALE = os.getenv("LOCALE", "he").strip().lower()
+if LOCALE not in ("he", "en"):
+    raise ValueError("LOCALE must be he or en")
 ADMIN_HOST = os.getenv("ADMIN_HOST", "admin.your-domain.example")
 ADMIN_ALLOWED_EMAIL = os.getenv("ADMIN_ALLOWED_EMAIL", "")
 # Optional but recommended: verify the signed Cloudflare Access JWT instead of trusting the

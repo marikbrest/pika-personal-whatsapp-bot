@@ -90,15 +90,18 @@ def create_text_file(user_id: int, filename: str, content: str) -> dict:
     return result
 
 
+from src.i18n import t
+
+
 def format_files_for_reply(files: list[dict]) -> str:
-    """Formats a Drive search result as readable Hebrew text. Never goes
+    """Formats a Drive search result as readable text (in the current locale). Never goes
     through Gemini - these are facts, not guesses."""
     if not files:
-        return "לא מצאתי קבצים תואמים בדרייב."
+        return t("drive.no_files")
 
     lines = []
     for i, f in enumerate(files, start=1):
-        name = f.get("name") or "(ללא שם)"
+        name = f.get("name") or t("drive.unnamed")
         link = f.get("webViewLink") or ""
         lines.append(f"{i}. 📄 {name}\n   {link}")
     return "\n\n".join(lines)
