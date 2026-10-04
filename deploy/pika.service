@@ -1,0 +1,33 @@
+# systemd unit for running Pika directly on a Linux host (no Docker).
+# Install: see docs/DEPLOY.md. Assumes:
+#   - code in /opt/pika, virtualenv in /opt/pika/venv
+#   - secrets in /etc/pika/pika.env (mode 640, root:pika) - same variables as .env.example
+#   - a system user "pika" (no login shell)
+[Unit]
+Description=Pika personal assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pika
+Group=pika
+WorkingDirectory=/opt/pika
+EnvironmentFile=/etc/pika/pika.env
+Environment=DB_PATH=/var/lib/pika/assistant.db
+ExecStart=/opt/pika/venv/bin/uvicorn src.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+# SQLite lives in /var/lib/pika (StateDirectory creates it, owned by the service user)
+StateDirectory=pika
+# Hardening: the bot only needs to write its own data directory
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/pika
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
