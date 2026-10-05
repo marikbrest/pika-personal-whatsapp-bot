@@ -24,6 +24,7 @@ from inspect import signature
 from typing import Any, Callable, Iterator
 
 from src import config
+from src.i18n import t
 
 
 @dataclass(frozen=True)
@@ -105,7 +106,7 @@ def for_user(function: Callable[..., Any]) -> Callable[..., Any]:
 
 def unavailable_reply() -> str:
     spec = PROVIDERS[current_provider()]
-    return f"{spec.label} אינו זמין כרגע. לא ביצעתי פעולה. אפשר לנסות שוב או לבקש לעבור לספק השני."
+    return t("ai.unavailable", label=spec.label)
 
 
 def manage_provider(user: Any, args: dict) -> str:
@@ -116,17 +117,17 @@ def manage_provider(user: Any, args: dict) -> str:
     provider = args.get("provider")
     if action == "set":
         if provider not in PROVIDERS:
-            return "באיזה ספק להשתמש: " + " או ".join(s.label for s in PROVIDERS.values()) + "?"
+            return t("ai.which_provider", options=t("ai.or_joiner").join(s.label for s in PROVIDERS.values()))
         if not configured(provider):
-            return "הספק הזה עדיין לא מוגדר. מי שמפעיל את הבוט צריך להגדיר את מפתח ה-API ואת שם המודל."
+            return t("ai.not_configured")
         set_ai_provider(user["id"], provider)
-        return f"מעכשיו אשתמש ב-{PROVIDERS[provider].label} עבורך, גם בעדכונים היזומים שלך."
+        return t("ai.switched", label=PROVIDERS[provider].label)
     if action != "status":
-        return "אפשר לבקש לעבור לספק אחר, או לבדוק באיזה ספק אתה משתמש."
+        return t("ai.usage_hint")
     spec = PROVIDERS[provider_for(user)]
     others = [s.label for s in PROVIDERS.values() if s.name != spec.name and s.is_configured()]
-    extra = f"\nאפשר לעבור ל: {', '.join(others)}." if others else ""
-    return f"הספק שלך: {spec.label}. המודל: {spec.model()}.\nחיפוש בזיכרון ויצירת תמונות משתמשים תמיד ב-Gemini.{extra}"
+    extra = t("ai.status_others", others=", ".join(others)) if others else ""
+    return t("ai.status", label=spec.label, model=spec.model(), extra=extra)
 
 
 _SWITCH_PREFIXES = ("עבור ל־", "עבור ל-", "עבור ל", "תעבור ל־", "תעבור ל-", "השתמש ב־", "השתמש ב-", "חזור ל־", "חזור ל-", "switch to ", "use ")

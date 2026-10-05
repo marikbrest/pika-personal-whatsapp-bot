@@ -9,23 +9,16 @@ never messaged the bot, falls back to the `welcome_user` template (2 parameters:
 from src import config
 from src.config import OPERATOR_NAME, PUBLIC_BASE_URL, WHATSAPP_TEMPLATE_LANGUAGE
 from src.db.models import get_connection
+from src.i18n import t
 from src.integrations.whatsapp import send_text_or_template
 
 TEMPLATE_NAME = "welcome_user"
 
 
 def welcome_text(privacy_url: str, terms_url: str) -> str:
-    who = f" של {OPERATOR_NAME}" if OPERATOR_NAME else ""
-    return (
-        f"👋 הוספו אותך לעוזר האישי{who}.\n"
-        "מה חשוב לדעת על המידע שלך: ההודעות שלך נשלחות ל-Gemini של Google"
-        + (" (או ל-OpenAI, אם תבחר בו)" if config.OPENAI_API_KEY and config.OPENAI_MODEL else "")
-        + " ועוברות דרך WhatsApp של מטא, "
-        "ומי שמפעיל את הבוט יכול טכנית לקרוא אותן.\n"
-        f"מדיניות פרטיות: {privacy_url}\n"
-        f"תנאי שימוש: {terms_url}\n"
-        "בכל רגע אפשר לכתוב לי \"תראה לי מה יש לך עליי\" או \"תמחק את ההיסטוריה שלי\"."
-    )
+    who = t("welcome.operator_suffix", operator=OPERATOR_NAME) if OPERATOR_NAME else ""
+    openai_note = t("welcome.openai_note") if config.OPENAI_API_KEY and config.OPENAI_MODEL else ""
+    return t("welcome.message", who=who, openai_note=openai_note, privacy_url=privacy_url, terms_url=terms_url)
 
 
 def send_welcome_if_needed(user_id: int) -> str:

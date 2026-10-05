@@ -13,6 +13,7 @@ from src.config import DEFAULT_LOCATION, DEFAULT_TIMEZONE
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from src.i18n import t
 from src.integrations.gmail import format_emails_for_reply, list_recent_emails
 from src.integrations.google_calendar import format_events_for_reply, list_events
 from src.integrations.google_oauth import GoogleAuthExpiredError, NotConnectedError
@@ -50,8 +51,8 @@ def _calendar_section(user_id: int, timezone_name: str) -> str | None:
         return None
 
     if not events:
-        return "📅 היומן שלך פנוי היום."
-    return "📅 היום ביומן:\n" + format_events_for_reply(events, timezone_name)
+        return t("brief.calendar_free")
+    return t("brief.calendar_header") + format_events_for_reply(events, timezone_name)
 
 
 def _calendar_section_or_none(user_id: int, timezone_name: str) -> str | None:
@@ -75,9 +76,9 @@ def _weather_section(location: str) -> str | None:
         print(f"[brief] weather failed: {e}")
         return None
 
-    return (
-        f"🌤️ מזג האוויר ב{weather['location']}: {weather['description']}, "
-        f"{weather['temperature']:.0f}°C (מרגיש כמו {weather['feels_like']:.0f}°C)"
+    return t(
+        "brief.weather", location=weather["location"], description=weather["description"],
+        temperature=weather["temperature"], feels_like=weather["feels_like"],
     )
 
 
@@ -92,8 +93,8 @@ def _email_section(user_id: int) -> str | None:
         return None
 
     if not emails:
-        return "📧 אין מיילים חדשים."
-    return f"📧 {len(emails)} מיילים שלא נקראו:\n" + format_emails_for_reply(emails)
+        return t("brief.no_email")
+    return t("brief.email_header", count=len(emails)) + format_emails_for_reply(emails)
 
 
 def build_morning_brief(user_id: int, timezone_name: str, display_name: str | None = None,
@@ -103,7 +104,7 @@ def build_morning_brief(user_id: int, timezone_name: str, display_name: str | No
     left out rather than replaced with error text - the brief should read
     cleanly, and the underlying failure is already in the log.
     """
-    greeting = f"☀️ בוקר טוב{', ' + display_name if display_name else ''}!"
+    greeting = t("greeting.morning", name=t("greeting.name_suffix", name=display_name) if display_name else "")
 
     sections = [
         _weather_section(location),
@@ -115,9 +116,6 @@ def build_morning_brief(user_id: int, timezone_name: str, display_name: str | No
     if not present:
         # Everything failed or nothing is connected - say so plainly instead of
         # sending a greeting with no content.
-        return (
-            f"{greeting}\n\nלא הצלחתי להביא מידע לסיכום הבוקר. "
-            f"אם עוד לא חיברת את גוגל, אפשר להגיד לי \"תחבר לי את הג'ימייל\"."
-        )
+        return f"{greeting}\n\n" + t("brief.nothing_available")
 
     return greeting + "\n\n" + "\n\n".join(present)

@@ -5,9 +5,9 @@ issue; see [CONTRIBUTING.md](./CONTRIBUTING.md) and [docs/ADDING_A_TOOL.md](./do
 
 ## Wanted (open to contributors)
 
-- **English (and other-language) replies.** The bot understands English, but the messages the code
-  itself composes (confirmations, lists, errors) are Hebrew string literals. Extract them into
-  per-language catalogs with a `LOCALE` setting. Biggest barrier for non-Hebrew users.
+- **More languages, and the rest of the strings.** `LOCALE` (`he`, `en`) and the catalogs in `src/locales/` exist; still
+  Hebrew-only are the admin dashboard (`src/admin_handler.py`), tool descriptions, the classification prompts and the
+  provider-switch phrases in `src/ai.py`. A new language is one `src/locales/<code>.py` file.
 - **More LLM providers.** OpenAI is built in as an optional per-user provider
   ([docs/ADDING_A_PROVIDER.md](./docs/ADDING_A_PROVIDER.md)); Anthropic or a local OpenAI-compatible server would each be one adapter
   module plus a registry entry.

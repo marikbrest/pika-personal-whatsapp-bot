@@ -34,6 +34,9 @@ def openai_month_cost() -> tuple[float, int]:
     return total, unknown
 
 
+from src.i18n import t
+
+
 def openai_report() -> str:
     """Empty string when OpenAI was never used, so installs without it see no change in the report."""
     rows = get_ai_usage_summary("openai")
@@ -41,7 +44,7 @@ def openai_report() -> str:
     if not calls:
         return ""
     cost, unknown = openai_month_cost()
-    text = f"\n\n🤖 OpenAI החודש: {calls} קריאות, עלות מחושבת ${cost:.4f} (הערכה)."
+    text = t("costs.openai_month", calls=calls, cost=cost)
     if unknown:
-        text += f"\n⚠️ {unknown} קריאות אינן מתומחרות בהערכה; הסכום אינו מלא."
+        text += t("costs.openai_unpriced", unknown=unknown)
     return text

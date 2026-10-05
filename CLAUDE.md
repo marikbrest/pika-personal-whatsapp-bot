@@ -46,7 +46,9 @@ Work in this order and stop at the first failure (each step is checkable):
 - OpenAI is optional. If the person wants it: both `OPENAI_API_KEY` and `OPENAI_MODEL` (no default model name exists), then `doctor.py`. It changes who receives
   users' content; `/privacy` updates itself, but tell the person.
 - Google OAuth consent screen left in *Testing* expires refresh tokens every 7 days; publish it to *Production*.
-- Replies composed by the code are Hebrew (the model understands English). Do not promise English replies.
+- Replies composed by the code follow `LOCALE` (`he` default, `en` supported; catalogs in `src/locales/`). If they switch,
+  also set `WHATSAPP_TEMPLATE_LANGUAGE` and approve the templates in that language; `doctor.py` warns when the two differ.
+  The admin dashboard and the model's own classification prompts are still Hebrew.
 
 ## B. The person wants to CHANGE the code
 

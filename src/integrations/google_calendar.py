@@ -15,14 +15,17 @@ from src.config import DEFAULT_TIMEZONE
 from src.integrations.google_oauth import GoogleAuthExpiredError, NotConnectedError, get_credentials, is_genuine_auth_rejection
 
 
+from src.i18n import t
+
+
 def format_events_for_reply(events: list, timezone_name: str) -> str:
     """
-    Formats a list of events (from list_events) as readable Hebrew text for
+    Formats a list of events (from list_events) as readable text (in the current locale) for
     WhatsApp. Never goes through Gemini - this is factual data, not a guess,
     so it is formatted directly in code.
     """
     if not events:
-        return "אין אירועים בטווח הזמן הזה."
+        return t("calendar.no_events")
 
     tz = ZoneInfo(timezone_name or DEFAULT_TIMEZONE)
     lines = []
@@ -32,7 +35,7 @@ def format_events_for_reply(events: list, timezone_name: str) -> str:
             dt = datetime.fromisoformat(start).astimezone(tz)
             time_str = dt.strftime("%H:%M")
         else:
-            time_str = "כל היום"
+            time_str = t("calendar.all_day")
         location = f" ({event['location']})" if event.get("location") else ""
         lines.append(f"🕐 {time_str} — {event['summary']}{location}")
 
@@ -94,7 +97,7 @@ def list_events(user_id: int, time_min: datetime, time_max: datetime, timezone_n
         events.append(
             {
                 "id": item.get("id"),
-                "summary": item.get("summary", "(ללא כותרת)"),
+                "summary": item.get("summary") or t("calendar.untitled"),
                 "start": start,
                 "end": end,
                 "location": item.get("location"),

@@ -153,21 +153,16 @@ from src.intent_parser import (
     parse_voice_message,
     revise_email_draft,
 )
+from src.i18n import answer_language_line, t
 from src.scheduler import (
-    _HEBREW_DAY_NAMES,
+    _UNKNOWN_PACKAGE_STATUS,
+    day_name,
     _WEEKDAY_NAMES,
     _next_persistent_reminder_occurrence,
     compute_next_trigger,
     format_schedule_description,
+    package_status_label,
 )
-
-VOICE_DOWNLOAD_FAILED_REPLY = "לא הצלחתי לקבל את ההודעה הקולית, תוכל לנסות שוב או לכתוב בטקסט?"
-MEDIA_DOWNLOAD_FAILED_REPLY = "לא הצלחתי לקבל את הקובץ, תוכל לנסות לשלוח שוב?"
-MEDIA_UNSUPPORTED_REPLY = (
-    "אני יכול לקרוא תמונות וקבצי PDF. את הסוג הזה של קובץ אני עדיין לא יודע לפתוח — "
-    "אפשר לשלוח צילום מסך שלו במקום."
-)
-MEDIA_TOO_LARGE_REPLY = "הקובץ גדול מדי בשבילי (מעל 15MB). אפשר לשלוח גרסה קטנה יותר?"
 
 router = APIRouter()
 
@@ -341,27 +336,22 @@ def _build_tools_context(
 
     history_text = _format_history(history)
     history_block = (
-        f"\nהשיחה עד כה (מהישן לחדש, להקשר בלבד):\n{history_text}\n" if history_text else ""
+        t("wh.build_tools_context.2", history_text=history_text) if history_text else ""
     )
     contacts_text = _format_contacts(contacts)
     facts_block = _format_facts(facts)
     draft_block = _format_pending_draft_for_tools(pending_draft) if pending_draft else ""
     suggestion_block = (
-        f"[הקשר: הצעת קודם לך לבצע פעולה - \"{pending_suggestion['confirmation_text']}\" - וזה עדיין ממתין "
-        f"לתשובתך. אם ההודעה הבאה היא תגובה להצעה הזו (אישור/דחייה), בחר בכלי confirm_suggestion.]\n\n"
+        t("wh.build_tools_context.3", confirmation_text=pending_suggestion['confirmation_text'])
         if pending_suggestion else ""
     )
     image_block = (
-        "[הקשר: המשתמש שלח תמונה לאחרונה והיא זמינה לעריכה. אם ההודעה הבאה מבקשת לשנות/לערוך אותה, "
-        "בחר בכלי edit_image.]\n\n"
+        t("wh.build_tools_context.4")
         if pending_image_upload else ""
     )
 
     return (
-        f"הזמן הנוכחי אצל המשתמש: {now_str}\n"
-        f"אזור זמן: {user['timezone']}\n"
-        f"אנשי הקשר השמורים של המשתמש: {contacts_text}\n"
-        f"{facts_block}{draft_block}{suggestion_block}{image_block}{history_block}"
+        t("wh.build_tools_context.1", now_str=now_str, timezone=user['timezone'], contacts_text=contacts_text, facts_block=facts_block, draft_block=draft_block, suggestion_block=suggestion_block, image_block=image_block, history_block=history_block)
     )
 
 
@@ -377,12 +367,7 @@ def _format_pending_draft_for_tools(pending_draft) -> str:
     names the old "email_action" intent directly.
     """
     return (
-        f"[הקשר: יש למשתמש טיוטת מייל ממתינה לאישור כרגע -\n"
-        f"אל: {pending_draft['to_address']}\n"
-        f"נושא: {pending_draft['subject']}\n"
-        f"גוף: {pending_draft['body']}\n"
-        f"אם ההודעה הבאה היא תגובה לטיוטה הזו (אישור/ביטול/בקשת שינוי), "
-        f"בחר בכלי respond_to_email_draft.]\n\n"
+        t("wh.format_pending_draft_for_tools.1", to_address=pending_draft['to_address'], subject=pending_draft['subject'], body=pending_draft['body'])
     )
 
 
@@ -458,13 +443,13 @@ def _classify_text_with_cutover(
     tools = tools_for(user)
     if not allow_provider_change:
         # a forwarded/quoted message must never be able to change a setting
-        tools = [t for t in tools if t.name != "manage_ai_provider"]
+        tools = [tool for tool in tools if tool.name != "manage_ai_provider"]
     if pending_draft is None:
-        tools = [t for t in tools if t.name != "respond_to_email_draft"]
+        tools = [tool for tool in tools if tool.name != "respond_to_email_draft"]
     if pending_suggestion is None:
-        tools = [t for t in tools if t.name != "confirm_suggestion"]
+        tools = [tool for tool in tools if tool.name != "confirm_suggestion"]
     if pending_image_upload is None:
-        tools = [t for t in tools if t.name != "edit_image"]
+        tools = [tool for tool in tools if tool.name != "edit_image"]
 
     context = _build_tools_context(
         user, history, contacts, pending_draft, facts, pending_suggestion, pending_image_upload,
@@ -480,7 +465,7 @@ def _classify_text_with_cutover(
     if pilot_result is not None:
         tool_name, args = pilot_result
         if tool_name not in ("chat", "unclear"):
-            tool = next((t for t in tools if t.name == tool_name), None)
+            tool = next((tool for tool in tools if tool.name == tool_name), None)
             if tool is not None:
                 reply = execute_tool(tool, user, args)
                 # tool_executed: the tool already ran above - the legacy action
@@ -493,7 +478,7 @@ def _classify_text_with_cutover(
         # answer from a real chat/unclear result, otherwise tell the user the provider is unavailable. Nothing is
         # ever sent to the other provider behind the user's back.
         if pilot_result is not None and pilot_result[0] in ("chat", "unclear"):
-            tool = next((t for t in tools if t.name == pilot_result[0]), None)
+            tool = next((tool for tool in tools if tool.name == pilot_result[0]), None)
             if tool is not None:
                 return {"intent": pilot_result[0], "reply": execute_tool(tool, user, pilot_result[1]), "tool_executed": True}
         return {"intent": "unclear", "reply": unavailable_reply(), "tool_executed": True}
@@ -542,7 +527,7 @@ def _transcribe_media(media_bytes: bytes, mime_type: str, kind: str, caption: st
             'החזר אך ורק JSON בפורמט: {"transcript": "<התמלול המדויק>"}'
         )
     else:
-        caption_line = f'המשתמש צירף גם טקסט: "{caption}"' if caption else "המשתמש לא צירף טקסט נלווה."
+        caption_line = t("wh.transcribe_media.1", caption=caption) if caption else t("wh.transcribe_media.2")
         prompt = (
             "תאר את הקובץ המצורף (תמונה או PDF) בצורה מלאה ושימושית: אם יש בו טקסט גלוי "
             "(למשל קבלה, מסמך, חשבונית, מספר מעקב) - תמלל אותו במדויק, כולל מספרים וסכומים, "
@@ -730,13 +715,13 @@ def _check_task_confirmation(text_body: str, pending_reminder, user: dict) -> di
     else:
         next_occurrence = _next_persistent_reminder_occurrence(pending_reminder)
         reschedule_persistent_reminder_for_next_occurrence(pending_reminder["id"], next_occurrence)
-    owner_notice = f"✅ {pending_reminder['recipient_name']} אישר/ה שביצע/ה: {pending_reminder['content']}"
+    owner_notice = t("wh.check_task_confirmation.1", recipient_name=pending_reminder['recipient_name'], content=pending_reminder['content'])
     try:
         send_text_message(to=pending_reminder["owner_whatsapp_number"], body=owner_notice)
     except Exception as e:
         print(f"[webhook] failed to notify owner of task confirmation (non-fatal): {e}")
 
-    reply = "✅ מעולה, סימנתי את זה כבוצע! 🎉"
+    reply = t("wh.check_task_confirmation.2")
     return {"intent": "task_confirmation", "reply": reply}
 
 
@@ -803,11 +788,11 @@ def _suggest_action_from_forwarded(
 
     tools = tools_for(user)
     if pending_draft is None:
-        tools = [t for t in tools if t.name != "respond_to_email_draft"]
-    tools = [t for t in tools if t.name not in ("confirm_suggestion", "respond_to_email_draft", "manage_ai_provider")]
+        tools = [tool for tool in tools if tool.name != "respond_to_email_draft"]
+    tools = [tool for tool in tools if tool.name not in ("confirm_suggestion", "respond_to_email_draft", "manage_ai_provider")]
 
     suppressed = get_suppressed_suggestion_tools(user["id"])
-    tools = [t for t in tools if t.name not in suppressed]
+    tools = [tool for tool in tools if tool.name not in suppressed]
 
     context = _build_tools_context(user, history, contacts, pending_draft, facts)
     contents = (
@@ -826,7 +811,7 @@ def _suggest_action_from_forwarded(
     tool_name, args = result
     if tool_name in ("chat", "unclear"):
         return None
-    tool = next((t for t in tools if t.name == tool_name), None)
+    tool = next((tool for tool in tools if tool.name == tool_name), None)
     if tool is None:
         return None
     if tool.validate is not None and not tool.validate(args):
@@ -852,9 +837,9 @@ def _suggest_action_from_forwarded(
 
     if pending_suggestion is not None:
         update_suggestion_status(pending_suggestion["id"], "superseded", user["id"])
-        confirmation_text = f"(שים לב, זה מחליף הצעה קודמת שלא ענית עליה)\n{confirmation_text}"
+        confirmation_text = t("wh.suggest_action_from_forwarded.1", confirmation_text=confirmation_text)
 
-    confirmation_text = f'{confirmation_text}\n(מתוך: "{_truncate_for_quote(text_body)}")'
+    confirmation_text = t("wh.suggest_action_from_forwarded.2", confirmation_text=confirmation_text, p2=_truncate_for_quote(text_body))
 
     save_pending_suggestion(user["id"], tool_name, json.dumps(args), confirmation_text, text_body)
     return {"intent": "suggest_action", "reply": confirmation_text}
@@ -941,16 +926,16 @@ def _build_confirmation_question(tool, args: dict) -> str | None:
         f"'{tool.name}' ({tool.description}) עם הפרטים הבאים: {json.dumps(args, ensure_ascii=False)}.\n"
         "קודם שפוט: האם זו התאמה ברורה וסבירה לתוכן, לא מאולצת? אם יש לך ספק אמיתי אם זו "
         "פעולה שהמשתמש היה רוצה, ציין confident=false.\n"
-        "אם confident=true, כתוב גם משפט קצר אחד, טבעי וידידותי בעברית, שמציע את זה למשתמש "
+        f"אם confident=true, כתוב גם משפט קצר אחד, טבעי וידידותי ({answer_language_line()}), שמציע את זה למשתמש "
         "כשאלה (כן/לא) - בלי לחזור על שמות טכניים של כלים או שדות, ובלי לנסח כאילו זה כבר בוצע.\n"
         'החזר אך ורק JSON בפורמט: {"confident": true|false, "question": "..."}'
     )
     result = call_gemini_json(prompt)
     if not result:
-        return "זיהיתי אפשרות לפעולה שקשורה למה שהעברת. לבצע?"
+        return t("wh.build_confirmation_question.1")
     if result.get("confident") is False:
         return None
-    return result.get("question") or "זיהיתי אפשרות לפעולה שקשורה למה שהעברת. לבצע?"
+    return result.get("question") or t("wh.build_confirmation_question.1")
 
 
 def _check_for_duplicate_action(user: dict, tool_name: str, args: dict) -> str | None:
@@ -980,7 +965,7 @@ def _check_for_duplicate_action(user: dict, tool_name: str, args: dict) -> str |
             return None
         for r in list_active_reminders(user["id"]):
             if difflib.SequenceMatcher(None, content, r["content"].lower()).ratio() > 0.6:
-                return f'שים לב, כבר יש לך תזכורת דומה: "{r["content"]}".'
+                return t("wh.check_for_duplicate_action.1", content=r["content"])
         return None
 
     if tool_name == "manage_calendar" and args.get("action") == "create":
@@ -997,7 +982,7 @@ def _check_for_duplicate_action(user: dict, tool_name: str, args: dict) -> str |
             return None
         if conflicts:
             names = ", ".join(e["summary"] for e in conflicts)
-            return f"שים לב, זה חופף לאירוע קיים ביומן: {names}."
+            return t("wh.check_for_duplicate_action.2", names=names)
         return None
 
     return None
@@ -1017,16 +1002,16 @@ def _handle_confirm_suggestion_tool(user: dict, args: dict) -> str:
 
     suggestion = get_pending_suggestion(user["id"])
     if suggestion is None:
-        return "אין לי הצעה ממתינה כרגע."
+        return t("wh.confirm_suggestion_tool.1")
 
     if args.get("action") == "dismiss":
         update_suggestion_status(suggestion["id"], "dismissed", user["id"])
-        return "בסדר, לא עשיתי כלום."
+        return t("wh.confirm_suggestion_tool.2")
 
     tool = get_tool(suggestion["tool_name"])
     if tool is None:
         update_suggestion_status(suggestion["id"], "dismissed", user["id"])
-        return "משהו השתבש עם ההצעה הזו, אפשר לבקש שוב?"
+        return t("wh.confirm_suggestion_tool.3")
 
     tool_args = json.loads(suggestion["args_json"])
     reply = execute_tool(tool, user, tool_args)
@@ -1059,16 +1044,16 @@ def _handle_generate_image(user: dict, args: dict) -> str:
     """
     prompt = (args.get("prompt") or "").strip()
     if not prompt:
-        return "מה תרצה שאצייר?"
+        return t("wh.generate_image.1")
 
     result = generate_image(prompt)
     if result is None:
-        return "לא הצלחתי ליצור את התמונה כרגע, אפשר לנסות שוב?"
+        return t("wh.generate_image.2")
 
     image_bytes, mime_type = result
     if not send_image_bytes(user["whatsapp_number"], image_bytes, mime_type):
-        return "יצרתי את התמונה אבל השליחה נכשלה, אפשר לנסות שוב?"
-    return "🎨 הנה התמונה!"
+        return t("wh.generate_image.3")
+    return t("wh.generate_image.4")
 
 
 def _handle_edit_image(user: dict, args: dict) -> str:
@@ -1092,27 +1077,27 @@ def _handle_edit_image(user: dict, args: dict) -> str:
     """
     pending = get_pending_image_upload(user["id"])
     if pending is None:
-        return "לא מצאתי תמונה לערוך - שלח לי קודם את התמונה."
+        return t("wh.edit_image.1")
 
     instructions = (args.get("instructions") or "").strip()
     if not instructions:
-        return "מה תרצה שאשנה בתמונה?"
+        return t("wh.edit_image.2")
 
     downloaded = download_media(pending["media_id"])
     if downloaded is None:
         clear_pending_image_upload(user["id"])
-        return "לא הצלחתי להוריד שוב את התמונה המקורית, אפשר לשלוח אותה שוב?"
+        return t("wh.edit_image.3")
 
     image_bytes, mime_type = downloaded
     result = edit_image(image_bytes, mime_type, instructions)
     clear_pending_image_upload(user["id"])
     if result is None:
-        return "לא הצלחתי לערוך את התמונה כרגע, אפשר לנסות שוב?"
+        return t("wh.edit_image.4")
 
     edited_bytes, edited_mime = result
     if not send_image_bytes(user["whatsapp_number"], edited_bytes, edited_mime):
-        return "ערכתי את התמונה אבל השליחה נכשלה, אפשר לנסות שוב?"
-    return "🎨 הנה התמונה הערוכה!"
+        return t("wh.edit_image.5")
+    return t("wh.edit_image.6")
 
 
 def _handle_send_feature_request(user: dict, args: dict) -> str:
@@ -1133,9 +1118,9 @@ def _handle_send_feature_request(user: dict, args: dict) -> str:
     """
     request_text = (args.get("request_text") or "").strip()
     if not request_text:
-        return "לא הבנתי מה לשלוח, אפשר לנסח שוב מה חסר?"
+        return t("wh.send_feature_request.1")
 
-    body = f"💡 בקשת פיצ'ר מ-{user['display_name']}:\n{request_text}"
+    body = t("wh.send_feature_request.2", display_name=user['display_name'], request_text=request_text)
     for admin in admin_list_users():
         if not admin["is_admin"]:
             continue
@@ -1144,7 +1129,7 @@ def _handle_send_feature_request(user: dict, args: dict) -> str:
         except Exception as e:
             print(f"[webhook] could not notify admin {admin['id']} of a feature request (non-fatal): {e}")
 
-    return "שלחתי את הבקשה למפתח, תודה על הפידבק! 🙏"
+    return t("wh.send_feature_request.3")
 
 
 def _handle_manage_proactive_settings(user: dict, args: dict) -> str:
@@ -1170,60 +1155,59 @@ def _handle_manage_proactive_settings(user: dict, args: dict) -> str:
     if action == "enable":
         set_proactive_enabled(user["id"], True)
         return (
-            "הפעלתי את המצב היזום. אני אעדכן אותך על שינויים חשובים (כרגע: שינויים ביומן), "
-            "בכפוף לשעות השקט ולמגבלת ההתראות היומית שקבעת."
+            t("wh.manage_proactive_settings.1")
         )
 
     if action == "disable":
         set_proactive_enabled(user["id"], False)
-        return "כיביתי את המצב היזום. אני לא אפנה אליך מיוזמתי יותר."
+        return t("wh.manage_proactive_settings.2")
 
     if action == "status":
         settings = get_proactive_settings(user["id"])
         if settings is None or not settings["enabled"]:
-            return "המצב היזום כבוי אצלך כרגע."
+            return t("wh.manage_proactive_settings.3")
         lines = [
-            "המצב היזום פעיל.",
-            f"שעות שקט: {settings['quiet_hours_start']}–{settings['quiet_hours_end']}",
-            f"מקסימום התראות יזומות ביום: {settings['daily_cap']}",
-            f"תדריך לפני פגישה: {settings['meeting_lead_time_minutes']} דקות מראש",
+            t("wh.manage_proactive_settings.13"),
+            t("wh.manage_proactive_settings.14", quiet_hours_start=settings['quiet_hours_start'], quiet_hours_end=settings['quiet_hours_end']),
+            t("wh.manage_proactive_settings.15", daily_cap=settings['daily_cap']),
+            t("wh.manage_proactive_settings.16", meeting_lead_time_minutes=settings['meeting_lead_time_minutes']),
         ]
         if settings["status_quiet_until"]:
-            lines.append(f"שקט זמני עד: {settings['status_quiet_until']}")
+            lines.append(t("wh.manage_proactive_settings.17", status_quiet_until=settings['status_quiet_until']))
         return "\n".join(lines)
 
     if action == "set_status":
         minutes = args.get("minutes")
         if not minutes or minutes <= 0:
-            return "לכמה זמן תרצה שקט?"
+            return t("wh.manage_proactive_settings.4")
         until = datetime.now(ZoneInfo("UTC")) + timedelta(minutes=minutes)
         set_proactive_status_quiet_until(user["id"], until.isoformat())
-        return f"בסדר, לא אפריע עד {minutes} דקות מעכשיו (אלא אם זה VIP)."
+        return t("wh.manage_proactive_settings.5", minutes=minutes)
 
     if action == "clear_status":
         clear_proactive_status_quiet_until(user["id"])
-        return "בסדר, ביטלתי את מצב השקט הזמני."
+        return t("wh.manage_proactive_settings.6")
 
     if action == "set_quiet_hours":
         start, end = args.get("start"), args.get("end")
         if not start or not end:
-            return "באילו שעות תרצה שקט (למשל 22:30 עד 07:00)?"
+            return t("wh.manage_proactive_settings.7")
         set_proactive_quiet_hours(user["id"], start, end)
-        return f"עדכנתי את שעות השקט: {start}–{end}."
+        return t("wh.manage_proactive_settings.8", start=start, end=end)
 
     if action == "set_daily_cap":
         cap = args.get("cap")
         if not cap or cap <= 0:
-            return "כמה התראות יזומות מקסימום ביום?"
+            return t("wh.manage_proactive_settings.9")
         set_proactive_daily_cap(user["id"], cap)
-        return f"עדכנתי - מקסימום {cap} התראות יזומות ביום."
+        return t("wh.manage_proactive_settings.10", cap=cap)
 
     if action == "set_meeting_lead_time":
         lead_minutes = args.get("lead_minutes")
         if not lead_minutes or lead_minutes <= 0:
-            return "כמה דקות לפני פגישה תרצה שאזכיר לך?"
+            return t("wh.manage_proactive_settings.11")
         set_proactive_meeting_lead_time(user["id"], lead_minutes)
-        return f"עדכנתי - אשלח תדריך {lead_minutes} דקות לפני כל פגישה."
+        return t("wh.manage_proactive_settings.12", lead_minutes=lead_minutes)
 
     return FALLBACK_REPLY
 
@@ -1263,33 +1247,33 @@ def _handle_manage_vip_senders(user: dict, args: dict) -> str:
 
     if action == "add":
         if not identifier:
-            return "איזו כתובת מייל או מספר טלפון תרצה להוסיף כ-VIP?"
+            return t("wh.manage_vip_senders.1")
         if not _looks_like_email_or_phone(identifier):
             contact = get_contact_by_name(user["id"], identifier)
             if contact is None:
-                return f'לא מצאתי איש קשר בשם "{identifier}". אפשר לתת את כתובת המייל או מספר הטלפון שלו/ה ישירות?'
+                return t("wh.manage_vip_senders.2", identifier=identifier)
             label = label or contact["name"]
             identifier = contact["whatsapp_number"]
         add_vip_sender(user["id"], identifier, label)
         label_part = f" ({label})" if label else ""
-        return f"הוספתי את {identifier}{label_part} לרשימת ה-VIP שלך - עדכונים שקשורים אליו/ה יעקפו שעות שקט."
+        return t("wh.manage_vip_senders.3", identifier=identifier, label_part=label_part)
 
     if action == "list":
         vips = list_vip_senders(user["id"])
         if not vips:
-            return "אין לך אף אחד ברשימת ה-VIP כרגע."
+            return t("wh.manage_vip_senders.4")
         lines = [f"• {v['identifier']}" + (f" ({v['label']})" if v["label"] else "") for v in vips]
-        return "רשימת ה-VIP שלך:\n" + "\n".join(lines)
+        return t("wh.manage_vip_senders.6") + "\n".join(lines)
 
     if action == "remove":
         if not identifier:
-            return "את מי להסיר מרשימת ה-VIP?"
+            return t("wh.manage_vip_senders.5")
         if not _looks_like_email_or_phone(identifier):
             contact = get_contact_by_name(user["id"], identifier)
             if contact is not None:
                 identifier = contact["whatsapp_number"]
         removed = remove_vip_sender(user["id"], identifier)
-        return f"הסרתי את {identifier} מרשימת ה-VIP." if removed else f"לא מצאתי את {identifier} ברשימת ה-VIP שלך."
+        return t("wh.manage_vip_senders.7", identifier=identifier) if removed else t("wh.manage_vip_senders.8", identifier=identifier)
 
     return FALLBACK_REPLY
 
@@ -1308,53 +1292,53 @@ def _handle_manage_vip_senders(user: dict, args: dict) -> str:
 # deliberately absent - they are not something a user would ever think to
 # ask about as a standalone capability.
 _CAPABILITY_GROUPS = [
-    ("📅 יומן ותזכורות", [
-        ("create_reminder", "לקבוע תזכורת (חד-פעמית, יומית או שבועית), לעצמך או למישהו מאנשי הקשר שלך"),
-        ("manage_reminders", "לראות, לבטל, לדחות או לשנות תזכורות קיימות"),
-        ("manage_calendar", "לצפות, לקבוע ולעדכן אירועים ב-Google Calendar"),
-        ("manage_kids_schedule", "לשמור מערכת שעות שבועית לכל ילד, ולקבל ממני תזכורת אוטומטית כל ערב על המחר"),
-        ("manage_daily_meetings_summary", "להפעיל/לכבות סיכום אוטומטי של הפגישות שלך כל בוקר, בשעה שתבחר"),
-        ("manage_persistent_reminders", "לשלוח תזכורת מתמידה לאיש קשר (למשל ילד) שחוזרת כל כמה דקות עד שהוא מאשר שעשה את זה"),
+    ("capability.group.1", [
+        ("create_reminder", "capability.create_reminder"),
+        ("manage_reminders", "capability.manage_reminders"),
+        ("manage_calendar", "capability.manage_calendar"),
+        ("manage_kids_schedule", "capability.manage_kids_schedule"),
+        ("manage_daily_meetings_summary", "capability.manage_daily_meetings_summary"),
+        ("manage_persistent_reminders", "capability.manage_persistent_reminders"),
     ]),
-    ("📧 מייל", [
-        ("read_emails", "להראות לך מיילים אחרונים"),
-        ("draft_email", "לכתוב טיוטת מייל ולבקש ממך אישור לפני שליחה"),
-        ("analyze_email", "לסכם שרשור מיילים, או להראות אילו מיילים ששלחת עדיין מחכים לתשובה"),
+    ("capability.group.2", [
+        ("read_emails", "capability.read_emails"),
+        ("draft_email", "capability.draft_email"),
+        ("analyze_email", "capability.analyze_email"),
     ]),
-    ("🛒 רשימות וזיכרון", [
-        ("manage_tasks", "לנהל רשימות (קניות, מטלות) - להוסיף, להראות, לסמן כבוצע"),
-        ("manage_memory", "לזכור פרטים אישיים עליך לטווח ארוך, כשתבקש במפורש"),
-        ("manage_saved_links", "לשמור קישורים ששלחת, ולהראות אותם שוב כשתבקש"),
+    ("capability.group.3", [
+        ("manage_tasks", "capability.manage_tasks"),
+        ("manage_memory", "capability.manage_memory"),
+        ("manage_saved_links", "capability.manage_saved_links"),
     ]),
-    ("🏠 בית ומעקב", [
-        ("get_infra_status", "לבדוק את מצב שרת/רשת/פיירוול הבית (מנהל בלבד)"),
-        ("track_package", "לעקוב אחרי סטטוס חבילות ומשלוחים"),
-        ("manage_watches", "לעקוב אחרי שינוי בעמוד אינטרנט או תגובה למייל, ולהודיע לך"),
+    ("capability.group.4", [
+        ("get_infra_status", "capability.get_infra_status"),
+        ("track_package", "capability.track_package"),
+        ("manage_watches", "capability.manage_watches"),
     ]),
-    ("🎨 תמונות", [
-        ("generate_image", "ליצור תמונה חדשה לפי תיאור שלך"),
-        ("edit_image", "לערוך תמונה ששלחת (למשל לשנות סגנון, להוסיף/להסיר משהו)"),
+    ("capability.group.5", [
+        ("generate_image", "capability.generate_image"),
+        ("edit_image", "capability.edit_image"),
     ]),
-    ("🌐 כללי", [
-        ("get_weather", "מזג אוויר בכל מקום ותאריך"),
-        ("get_market_quote", "מחירי מניות ומטבעות בזמן אמת"),
-        ("web_search", "לחפש מידע עדכני באינטרנט"),
-        ("manage_ai_provider", "לבחור באיזה ספק AI אני משתמש (Gemini או OpenAI, אם הופעל) ולבדוק את הספק והמודל הנוכחיים"),
-        ("search_history", "לחפש בשיחות ישנות ובקישורים ששמרת"),
-        ("manage_drive", "לחפש קבצים ב-Google Drive, או לשמור הערה חדשה"),
-        ("connect_google", "לחבר את Gmail/Calendar/Drive שלך לבוט"),
-        ("add_contact", "לשמור איש קשר חדש בספר הטלפונים הפרטי שלך"),
-        ("get_morning_brief", "תדריך בוקר אחד שמשלב יומן, מזג אוויר ומיילים שלא נקראו"),
-        ("get_usage_status", "דוח עלויות ושימוש ב-API של הבוט (מנהל בלבד)"),
-        ("manage_bot_users", "לנהל מי מורשה להשתמש בבוט (מנהל בלבד)"),
+    ("capability.group.6", [
+        ("get_weather", "capability.get_weather"),
+        ("get_market_quote", "capability.get_market_quote"),
+        ("web_search", "capability.web_search"),
+        ("manage_ai_provider", "capability.manage_ai_provider"),
+        ("search_history", "capability.search_history"),
+        ("manage_drive", "capability.manage_drive"),
+        ("connect_google", "capability.connect_google"),
+        ("add_contact", "capability.add_contact"),
+        ("get_morning_brief", "capability.get_morning_brief"),
+        ("get_usage_status", "capability.get_usage_status"),
+        ("manage_bot_users", "capability.manage_bot_users"),
     ]),
-    ("🔒 פרטיות", [
-        ("explain_privacy", "להסביר בדיוק מי יכול לראות מה - כולל מה שמנהל המערכת כן ולא רואה"),
-        ("manage_my_data", "להראות לך מה שמור עליך אצלי, או למחוק את יומן השיחה שלך"),
+    ("capability.group.7", [
+        ("explain_privacy", "capability.explain_privacy"),
+        ("manage_my_data", "capability.manage_my_data"),
     ]),
-    ("🔔 עדכונים יזומים", [
-        ("manage_proactive_settings", "להפעיל/לכבות עדכונים יזומים (כרגע: שינויים ביומן), לקבוע שעות שקט, שקט זמני או מגבלה יומית"),
-        ("manage_vip_senders", "לנהל רשימת VIP שעוקפת שעות שקט בעדכונים יזומים"),
+    ("capability.group.8", [
+        ("manage_proactive_settings", "capability.manage_proactive_settings"),
+        ("manage_vip_senders", "capability.manage_vip_senders"),
     ]),
 ]
 
@@ -1367,18 +1351,18 @@ def _handle_explain_capabilities(user: dict) -> str:
     """
     from src.tools.registry import tools_for
 
-    available_names = {t.name for t in tools_for(user)}
+    available_names = {tool.name for tool in tools_for(user)}
 
     sections = []
     for group_title, entries in _CAPABILITY_GROUPS:
-        lines = [f"• {desc}" for name, desc in entries if name in available_names]
+        lines = [f"• {t(desc_key)}" for name, desc_key in entries if name in available_names]
         if lines:
-            sections.append(f"{group_title}:\n" + "\n".join(lines))
+            sections.append(f"{t(group_title)}:\n" + "\n".join(lines))
 
     return (
-        "הנה מה שאני יודע לעשות:\n\n"
+        t("wh.explain_capabilities.1")
         + "\n\n".join(sections)
-        + "\n\n💡 גם: אם תעביר לי הודעה מועברת, אני אבדוק לבד אם יש בה משהו שכדאי לפעול לפיו (כמו תזכורת או אירוע ביומן) ואציע לך."
+        + t("wh.explain_capabilities.2")
     )
 
 
@@ -1405,34 +1389,16 @@ def _build_capability_list_for_old_classifier(user: dict) -> str:
     """
     from src.tools.registry import tools_for
 
-    available_names = {t.name for t in tools_for(user)}
+    available_names = {tool.name for tool in tools_for(user)}
     lines = [
-        f"- {name}: {desc}"
+        f"- {name}: {t(desc_key)}"
         for _group_title, entries in _CAPABILITY_GROUPS
-        for name, desc in entries
+        for name, desc_key in entries
         if name in available_names
     ]
     return "\n".join(lines)
 
 
-_PRIVACY_EXPLANATION = (
-    "אני שומר על הפרטיות שלך ברצינות:\n\n"
-    "• כל שיחה שלך איתי היא פרטית - אף משתמש אחר, כולל המנהל, "
-    "לא רואה את תוכן ההודעות או המיילים שלך דרך שום מסך שיש לו.\n"
-    "• המנהל, כמנהל היחיד, כן יכול לראות: כמה הודעות שלחת (לא מה כתבת בהן), "
-    "אילו תזכורות פעילות יש לך, וסטטיסטיקות שימוש כלליות - לא תוכן שיחות או מיילים.\n"
-    "• כל פעם שהוא פותח את התזכורות שלך במסך הניהול, או מבטל תזכורת שלך, זה נרשם "
-    "בלוג ביקורת מתועד - זו לא רק הבטחה, יש תיעוד אמיתי.\n\n"
-    "אם תפעיל אצלך את \"המצב היזום\" (עדכונים יזומים על היומן/מייל בלי שתבקש): "
-    "אני קורא את המיילים והיומן שלך ברקע כדי להחליט מה כדאי לעדכן אותך עליו - זה נשלח למודל AI "
-    "לצורך זיהוי וניסוח בלבד, שום בן אדם (כולל המנהל) לא רואה את זה. זה כבוי כברירת מחדל, ורק אתה "
-    "מפעיל את זה אצלך.\n\n"
-    "תוכן ההודעות והמידע הדרוש מיומן ומייל נשלחים לספק ה-AI שנבחר: Gemini של Google כברירת מחדל, "
-    "או OpenAI אם מי שמפעיל את הבוט הפעיל אותו ובחרת בו. חיפוש בזיכרון ויצירת תמונות תמיד משתמשים ב-Gemini. "
-    "בבקשות OpenAI מוגדר store=false, אך זו אינה הבטחה לאפס שמירה מצד השירות.\n\n"
-    "אתה תמיד יכול לבקש ממני \"תראה לי מה יש עליי\" כדי לראות בדיוק מה שמור אצלי, "
-    "או \"תמחק את ההיסטוריה שלי\" כדי למחוק את יומן השיחה שלך."
-)
 
 
 def _handle_explain_privacy() -> str:
@@ -1453,7 +1419,7 @@ def _handle_explain_privacy() -> str:
     admin_audit_log feature, and src/proactive.py's own data handling - if
     any of them change, update this too.
     """
-    return _PRIVACY_EXPLANATION
+    return t("privacy.explanation")
 
 
 def _handle_manage_my_data(user: dict, args: dict) -> str:
@@ -1473,21 +1439,21 @@ def _handle_manage_my_data(user: dict, args: dict) -> str:
     action = args.get("action")
     if action == "delete_history":
         deleted = delete_all_messages_for_user(user["id"])
-        return f"מחקתי את יומן השיחה שלך - {deleted} הודעות הוסרו."
+        return t("wh.manage_my_data.1", deleted=deleted)
 
     summary = get_user_data_summary(user["id"])
-    google_line = "מחובר" if summary["google_connected"] else "לא מחובר"
+    google_line = t("wh.manage_my_data.2") if summary["google_connected"] else t("wh.manage_my_data.3")
     lines = [
-        f"💬 הודעות: {summary['message_count']} (מאז {summary['first_message_at'] or '—'})",
-        f"⏰ תזכורות פעילות: {summary['active_reminders']}",
-        f"🔔 תזכורות מתמידות פעילות: {summary['active_persistent_reminders']}",
-        f"🛒 משימות פתוחות: {summary['open_tasks']}",
-        f"👤 אנשי קשר שמורים: {summary['contacts']}",
-        f"🔗 קישורים שמורים: {summary['saved_links']}",
-        f"🧠 עובדות שנשמרו עליך: {summary['remembered_facts']}",
+        t("wh.manage_my_data.4", message_count=summary['message_count'], p2=summary['first_message_at'] or '—'),
+        t("wh.manage_my_data.5", active_reminders=summary['active_reminders']),
+        t("wh.manage_my_data.6", active_persistent_reminders=summary['active_persistent_reminders']),
+        t("wh.manage_my_data.7", open_tasks=summary['open_tasks']),
+        t("wh.manage_my_data.8", contacts=summary['contacts']),
+        t("wh.manage_my_data.9", saved_links=summary['saved_links']),
+        t("wh.manage_my_data.10", remembered_facts=summary['remembered_facts']),
         f"📧 Google (Gmail/Calendar): {google_line}",
     ]
-    return "הנה מה ששמור אצלי עליך:\n\n" + "\n".join(lines)
+    return t("wh.manage_my_data.11") + "\n".join(lines)
 
 
 def _process_single_message(message: dict) -> None:
@@ -1621,8 +1587,8 @@ def _process_single_message_impl(message: dict) -> None:
                     parsed_intent="media_unsupported",
                 )
                 with _timed(timings, "whatsapp_send"):
-                    send_text_message(to=from_number, body=MEDIA_UNSUPPORTED_REPLY)
-                save_outgoing_message(user["id"], MEDIA_UNSUPPORTED_REPLY)
+                    send_text_message(to=from_number, body=t("reply.media_unsupported"))
+                save_outgoing_message(user["id"], t("reply.media_unsupported"))
                 _log_timing(timings, user["id"], msg_type, "media_unsupported")
                 return
 
@@ -1634,8 +1600,8 @@ def _process_single_message_impl(message: dict) -> None:
                     parsed_intent="media_download_failed",
                 )
                 with _timed(timings, "whatsapp_send"):
-                    send_text_message(to=from_number, body=MEDIA_DOWNLOAD_FAILED_REPLY)
-                save_outgoing_message(user["id"], MEDIA_DOWNLOAD_FAILED_REPLY)
+                    send_text_message(to=from_number, body=t("reply.media_download_failed"))
+                save_outgoing_message(user["id"], t("reply.media_download_failed"))
                 _log_timing(timings, user["id"], msg_type, "media_download_failed")
                 return
 
@@ -1648,8 +1614,8 @@ def _process_single_message_impl(message: dict) -> None:
                     parsed_intent="media_unsupported",
                 )
                 with _timed(timings, "whatsapp_send"):
-                    send_text_message(to=from_number, body=MEDIA_UNSUPPORTED_REPLY)
-                save_outgoing_message(user["id"], MEDIA_UNSUPPORTED_REPLY)
+                    send_text_message(to=from_number, body=t("reply.media_unsupported"))
+                save_outgoing_message(user["id"], t("reply.media_unsupported"))
                 _log_timing(timings, user["id"], msg_type, "media_unsupported")
                 return
 
@@ -1659,8 +1625,8 @@ def _process_single_message_impl(message: dict) -> None:
                     parsed_intent="media_too_large",
                 )
                 with _timed(timings, "whatsapp_send"):
-                    send_text_message(to=from_number, body=MEDIA_TOO_LARGE_REPLY)
-                save_outgoing_message(user["id"], MEDIA_TOO_LARGE_REPLY)
+                    send_text_message(to=from_number, body=t("reply.media_too_large"))
+                save_outgoing_message(user["id"], t("reply.media_too_large"))
                 _log_timing(timings, user["id"], msg_type, "media_too_large")
                 return
 
@@ -1705,8 +1671,8 @@ def _process_single_message_impl(message: dict) -> None:
                     parsed_intent="voice_download_failed",
                 )
                 with _timed(timings, "whatsapp_send"):
-                    send_text_message(to=from_number, body=VOICE_DOWNLOAD_FAILED_REPLY)
-                save_outgoing_message(user["id"], VOICE_DOWNLOAD_FAILED_REPLY)
+                    send_text_message(to=from_number, body=t("reply.voice_download_failed"))
+                save_outgoing_message(user["id"], t("reply.voice_download_failed"))
                 _log_timing(timings, user["id"], msg_type, "voice_download_failed")
                 return
 
@@ -1843,7 +1809,7 @@ def _process_single_message_impl(message: dict) -> None:
 
     except Exception as e:
         print(f"[webhook] unexpected error processing message: {e}")
-        send_text_message(to=from_number, body="קרתה תקלה, ננסה שוב.")
+        send_text_message(to=from_number, body=t("wh.process_single_message_impl.1"))
         _log_timing(timings, user["id"] if user else None, msg_type, "error")
 
 def _handle_reminder(user: dict, reminder: dict, reply_text: str) -> str:
@@ -1896,8 +1862,8 @@ def _handle_reminder(user: dict, reminder: dict, reply_text: str) -> str:
         missing = [name for name, contact in contacts.items() if contact is None]
         if missing:
             missing_list = ", ".join(missing)
-            add_lines = "\n".join(f"תוסיף איש קשר {name} + מספר הטלפון שלו." for name in missing)
-            return f'עדיין אין לי את המספר של: {missing_list}. תשלח לי קודם:\n{add_lines}'
+            add_lines = "\n".join(t("wh.reminder.2", name=name) for name in missing)
+            return t("wh.reminder.1", missing_list=missing_list, add_lines=add_lines)
         recipient_contact_ids = [contacts[name]["id"] for name in recipient_names]
 
     next_trigger_at = compute_next_trigger(
@@ -1925,7 +1891,7 @@ def _format_persistent_reminder_schedule(schedule_type: str, schedule_time: str 
     formatting for 'daily'/'weekly' rather than reimplementing it, so this
     reads identically to how an ordinary recurring reminder is described."""
     if schedule_type == "once":
-        return "חד-פעמי"
+        return t("wh.format_persistent_reminder_schedule.1")
     return format_schedule_description(schedule_type, schedule_time or "", schedule_days, DEFAULT_TIMEZONE)
 
 
@@ -1972,21 +1938,19 @@ def _handle_persistent_reminders(user: dict, args: dict) -> str:
         content = args["content"].strip()
 
         if not recipient_names:
-            return 'למי בדיוק? צריך שם של איש קשר שמור.'
+            return t("wh.persistent_reminders.1")
 
         contacts = {name: get_contact_by_name(user["id"], name) for name in recipient_names}
         missing = [name for name, contact in contacts.items() if contact is None]
         if missing:
             missing_list = ", ".join(missing)
-            add_lines = "\n".join(f"תוסיף איש קשר {name} + מספר הטלפון שלו." for name in missing)
-            return f'עדיין אין לי את המספר של: {missing_list}. תשלח לי קודם:\n{add_lines}'
+            add_lines = "\n".join(t("wh.reminder.2", name=name) for name in missing)
+            return t("wh.reminder.1", missing_list=missing_list, add_lines=add_lines)
 
         active_count = len(list_active_persistent_reminders(user["id"]))
         if active_count + len(recipient_names) > MAX_ACTIVE_PERSISTENT_REMINDERS_PER_USER:
             return (
-                f"יש כבר {active_count} תזכורות מתמידות פעילות, ואי אפשר להוסיף עוד "
-                f"{len(recipient_names)} בלי לעבור את המגבלה ({MAX_ACTIVE_PERSISTENT_REMINDERS_PER_USER}). "
-                f"צריך לבטל כמה לפני שאפשר להוסיף עוד."
+                t("wh.persistent_reminders.2", active_count=active_count, count=len(recipient_names), MAX_ACTIVE_PERSISTENT_REMINDERS_PER_USER=MAX_ACTIVE_PERSISTENT_REMINDERS_PER_USER)
             )
 
         schedule_type = args.get("schedule_type") or "once"
@@ -2008,36 +1972,34 @@ def _handle_persistent_reminders(user: dict, args: dict) -> str:
             )
 
         schedule_desc = _format_persistent_reminder_schedule(schedule_type, schedule_time, schedule_days)
-        recurring_note = "" if schedule_type == "once" else f" ({schedule_desc}, מתחדש בכל פעם)"
-        when = "עכשיו" if schedule_type == "once" and not schedule_time else "בזמן שנקבע"
-        who = " ו".join(filter(None, [", ".join(recipient_names[:-1]), recipient_names[-1]])) if len(recipient_names) > 1 else recipient_names[0]
+        recurring_note = "" if schedule_type == "once" else t("wh.persistent_reminders.7", schedule_desc=schedule_desc)
+        when = t("wh.persistent_reminders.8") if schedule_type == "once" and not schedule_time else t("wh.persistent_reminders.9")
+        who = t("wh.persistent_reminders.10").join(filter(None, [", ".join(recipient_names[:-1]), recipient_names[-1]])) if len(recipient_names) > 1 else recipient_names[0]
         return (
-            f"🔁 קבעתי: אזכיר ל{who} '{content}' כל "
-            f"{DEFAULT_PERSISTENT_REMINDER_RETRY_INTERVAL_MINUTES} דקות (מ{when}) עד שכל אחד/ת יאשרו שעשו את זה"
-            f"{recurring_note}. אם מישהו לא יאשר אחרי {DEFAULT_PERSISTENT_REMINDER_MAX_ATTEMPTS} תזכורות, אני אודיע לך."
+            t("wh.persistent_reminders.3", who=who, content=content, DEFAULT_PERSISTENT_REMINDER_RETRY_INTERVAL_MINUTES=DEFAULT_PERSISTENT_REMINDER_RETRY_INTERVAL_MINUTES, when=when, recurring_note=recurring_note, DEFAULT_PERSISTENT_REMINDER_MAX_ATTEMPTS=DEFAULT_PERSISTENT_REMINDER_MAX_ATTEMPTS)
         )
 
     if action == "list":
         recipient_name = (args.get("recipient_name") or "").strip()
         rows = list_active_persistent_reminders(user["id"], recipient_name or None)
         if not rows:
-            who = f" ל{recipient_name}" if recipient_name else ""
-            return f"אין לך תזכורות מתמידות פעילות{who} כרגע."
+            who = t("wh.persistent_reminders.11", recipient_name=recipient_name) if recipient_name else ""
+            return t("wh.persistent_reminders.4", who=who)
         lines = []
         for r in rows:
             schedule_desc = _format_persistent_reminder_schedule(r["schedule_type"], r["schedule_time"], r["schedule_days"])
             lines.append(
-                f"• {r['recipient_name']}: {r['content']} ({r['attempts_sent']}/{r['max_attempts']} תזכורות נשלחו, {schedule_desc})"
+                t("wh.persistent_reminders.12", recipient_name=r['recipient_name'], content=r['content'], attempts_sent=r['attempts_sent'], max_attempts=r['max_attempts'], schedule_desc=schedule_desc)
             )
-        return "🔁 תזכורות מתמידות פעילות:\n" + "\n".join(lines)
+        return t("wh.persistent_reminders.13") + "\n".join(lines)
 
     # cancel
     match = args["match"].strip()
     hit = find_persistent_reminder_by_match(user["id"], match)
     if hit is None:
-        return f'לא מצאתי בדיוק תזכורת מתמידה אחת שמתאימה ל"{match}" - אפשר לנסח אחרת?'
+        return t("wh.persistent_reminders.5", match=match)
     cancel_persistent_reminder(hit["id"], user["id"])
-    return f"🛑 ביטלתי את התזכורת המתמידה ל{hit['recipient_name']}: {hit['content']}"
+    return t("wh.persistent_reminders.6", recipient_name=hit['recipient_name'], content=hit['content'])
 
 
 def _handle_add_contact(user: dict, contact: dict, reply_text: str) -> str:
@@ -2194,20 +2156,20 @@ def _handle_calendar(user: dict, calendar: dict) -> str:
                 user["id"], calendar["summary"], start, end, user["timezone"],
                 attendee_emails=attendee_emails,
             )
-            reply = f"✅ נקבע: {calendar['summary']} ב-{start.strftime('%d/%m %H:%M')}"
+            reply = t("wh.calendar.1", summary=calendar['summary'], p2=start.strftime('%d/%m %H:%M'))
             if conflicts:
                 names = ", ".join(e["summary"] for e in conflicts)
-                reply += f"\n⚠️ שים לב, זה מתנגש עם: {names}"
+                reply += t("wh.calendar.7", names=names)
             if attendee_emails:
-                reply += "\nושלחתי הזמנה ליומן שלהם"
+                reply += t("wh.calendar.8")
 
             for other_user in not_connected_users:
                 try:
                     send_text_message(
                         to=other_user["whatsapp_number"],
-                        body=f"📅 {user['display_name']} קבע/ה: {calendar['summary']} ב-{start.strftime('%d/%m %H:%M')}",
+                        body=t("wh.calendar.2", display_name=user['display_name'], summary=calendar['summary'], p3=start.strftime('%d/%m %H:%M')),
                     )
-                    reply += f"\n{other_user['display_name']} לא מחובר/ת ליומן - שלחתי לו/ה הודעה במקום"
+                    reply += t("wh.calendar.9", display_name=other_user['display_name'])
                 except Exception as e:
                     print(f"[webhook] could not notify {other_user['id']} about a calendar event (non-fatal): {e}")
             return reply
@@ -2215,7 +2177,7 @@ def _handle_calendar(user: dict, calendar: dict) -> str:
         else:  # action == "update"
             event = find_event_by_match(user["id"], calendar["match"], user["timezone"])
             if event is None:
-                return f'לא מצאתי אירוע שמתאים ל"{calendar["match"]}", אפשר לתאר אחרת?'
+                return t("wh.calendar.3", match=calendar["match"])
 
             new_start = datetime.fromisoformat(calendar["start"]).replace(tzinfo=tz) if calendar.get("start") else None
             new_end = datetime.fromisoformat(calendar["end"]).replace(tzinfo=tz) if calendar.get("end") else None
@@ -2247,27 +2209,27 @@ def _handle_calendar(user: dict, calendar: dict) -> str:
                           new_start=new_start, new_end=new_end, new_summary=new_summary)
 
             label = new_summary or event["summary"]
-            reply = f"✅ עודכן: {label} ל-{new_start.strftime('%d/%m %H:%M')}" if new_start else f"✅ עודכן: {label}"
+            reply = t("wh.calendar.10", label=label, p2=new_start.strftime('%d/%m %H:%M')) if new_start else t("wh.calendar.11", label=label)
             if conflicts:
                 names = ", ".join(e["summary"] for e in conflicts)
-                reply += f"\n⚠️ שים לב, זה מתנגש עם: {names}"
+                reply += t("wh.calendar.7", names=names)
             return reply
 
     except NotConnectedError:
         from src.integrations.google_oauth import build_auth_url
 
         auth_url = build_auth_url(user["id"])
-        return f"עדיין לא חיברת את היומן שלך. הנה קישור להתחברות:\n\n{auth_url}"
+        return t("wh.calendar.4", auth_url=auth_url)
 
     except GoogleAuthExpiredError:
         from src.integrations.google_oauth import build_auth_url
 
         auth_url = build_auth_url(user["id"])
-        return f"נראה שההרשאה ליומן פגה או בוטלה. תוכל לחבר מחדש:\n\n{auth_url}"
+        return t("wh.calendar.5", auth_url=auth_url)
 
     except Exception as e:
         print(f"[webhook] calendar action failed: {e}")
-        return "הייתה בעיה בגישה ליומן, ננסה שוב מאוחר יותר."
+        return t("wh.calendar.6")
 
 
 def _handle_drive(user: dict, drive: dict) -> str:
@@ -2285,23 +2247,23 @@ def _handle_drive(user: dict, drive: dict) -> str:
         else:  # action == "save_note"
             created = create_text_file(user["id"], drive["filename"], drive["content"])
             link = created.get("webViewLink") or ""
-            return f"✅ נשמר בדרייב: {drive['filename']}\n{link}"
+            return t("wh.drive.1", filename=drive['filename'], link=link)
 
     except NotConnectedError:
         from src.integrations.google_oauth import build_auth_url
 
         auth_url = build_auth_url(user["id"])
-        return f"עדיין לא חיברת את הדרייב שלך. הנה קישור להתחברות:\n\n{auth_url}"
+        return t("wh.drive.2", auth_url=auth_url)
 
     except GoogleAuthExpiredError:
         from src.integrations.google_oauth import build_auth_url
 
         auth_url = build_auth_url(user["id"])
-        return f"נראה שההרשאה לדרייב פגה או בוטלה. תוכל לחבר מחדש:\n\n{auth_url}"
+        return t("wh.drive.3", auth_url=auth_url)
 
     except Exception as e:
         print(f"[webhook] drive action failed: {e}")
-        return "הייתה בעיה בגישה לדרייב, ננסה שוב מאוחר יותר."
+        return t("wh.drive.4")
 
 
 def _handle_web_search(web_search: dict) -> str:
@@ -2317,10 +2279,10 @@ def _handle_web_search(web_search: dict) -> str:
         result = search_web(query)
     except Exception as e:
         print(f"[webhook] web search failed: {e}")
-        return "הייתה בעיה בחיפוש ברשת, ננסה שוב מאוחר יותר."
+        return t("wh.web_search.1")
 
     if result is None or not result.get("answer"):
-        return "לא הצלחתי למצוא תשובה ברשת כרגע, אפשר לנסות לנסח אחרת?"
+        return t("wh.web_search.2")
 
     reply = result["answer"]
     sources = result.get("sources") or []
@@ -2356,13 +2318,13 @@ def _handle_weather(weather: dict) -> str:
             reply = format_forecast_for_reply(forecast, day_offset, is_range)
 
         if used_default:
-            reply += f"\n\n(לא ציינת עיר, אז הראתי את {DEFAULT_WEATHER_LOCATION} — אפשר גם לשאול על עיר ספציפית)"
+            reply += t("wh.weather.3", DEFAULT_WEATHER_LOCATION=DEFAULT_WEATHER_LOCATION)
         return reply
     except LocationNotFoundError:
-        return f'לא מצאתי עיר בשם "{location}", תוכל לנסות שם אחר?'
+        return t("wh.weather.1", location=location)
     except Exception as e:
         print(f"[webhook] weather lookup failed: {e}")
-        return "הייתה בעיה בבדיקת מזג האוויר, ננסה שוב מאוחר יותר."
+        return t("wh.weather.2")
 
 def _handle_market(market: dict) -> str:
     """Performs the real Yahoo Finance call (not Gemini) and returns the final reply."""
@@ -2371,10 +2333,10 @@ def _handle_market(market: dict) -> str:
         quote = get_quote(symbol)
         return format_quote_for_reply(quote)
     except SymbolNotFoundError:
-        return f'לא מצאתי סימבול "{symbol}", תוכל לוודא את השם או לנסות שם אחר?'
+        return t("wh.market.1", symbol=symbol)
     except Exception as e:
         print(f"[webhook] market lookup failed: {e}")
-        return "הייתה בעיה בבדיקת המחיר, ננסה שוב מאוחר יותר."
+        return t("wh.market.2")
 
 
 def _handle_zabbix_status(user: dict) -> str:
@@ -2392,16 +2354,16 @@ def _handle_zabbix_status(user: dict) -> str:
     whole reply over an unrelated integration.
     """
     if not user["is_admin"]:
-        return "מידע על הניטור זמין רק למנהל המערכת."
+        return t("wh.zabbix_status.1")
 
     try:
         problems = get_active_problems()
         reply = format_problems_for_reply(problems, user["timezone"])
     except ZabbixNotConfiguredError:
-        reply = "החיבור לזאביקס עדיין לא מוגדר (חסר ZABBIX_API_URL/ZABBIX_API_TOKEN)."
+        reply = t("wh.zabbix_status.2")
     except Exception as e:
         print(f"[webhook] zabbix status lookup failed: {e}")
-        reply = "הייתה בעיה בגישה לזאביקס, ננסה שוב מאוחר יותר."
+        reply = t("wh.zabbix_status.3")
 
     try:
         unifi_status = get_network_status()
@@ -2472,27 +2434,26 @@ def _build_usage_report_text() -> str:
     def _gemini_line(label: str, provider: str, prices: dict) -> str:
         stats = usage[provider]
         lines = []
-        for period_label, period in (("היום", "today"), ("החודש", "month")):
+        for period_label, period in ((t("wh.gemini_line.1"), "today"), (t("wh.gemini_line.2"), "month")):
             p = stats[period]
             cost = p["input_tokens"] * prices["input"] / 1_000_000
             if "output" in prices:
                 cost += p["output_tokens"] * prices["output"] / 1_000_000
-            lines.append(f"  {period_label}: {p['calls']} קריאות, {p['input_tokens']+p['output_tokens']:,} טוקנים, ${cost:.4f}")
+            lines.append(t("wh.gemini_line.3", period_label=period_label, calls=p['calls'], p3=p['input_tokens']+p['output_tokens'], cost=cost))
         return f"{label}:\n" + "\n".join(lines)
 
     from src.integrations.ai_costs import openai_report
 
     ship24_month_calls = usage["ship24"]["month"]["calls"]
     ship24_line = (
-        f"📮 Ship24: {ship24_month_calls}/{_SHIP24_MONTHLY_QUOTA} קריאות החודש "
-        f"({_SHIP24_MONTHLY_QUOTA - ship24_month_calls} נשארו)"
+        t("wh.build_usage_report_text.1", ship24_month_calls=ship24_month_calls, _SHIP24_MONTHLY_QUOTA=_SHIP24_MONTHLY_QUOTA, p3=_SHIP24_MONTHLY_QUOTA - ship24_month_calls)
     )
 
     return (
-        "💰 דוח שימוש ועלות:\n\n"
-        + _gemini_line("🤖 Gemini (סיווג הודעות)", "gemini_generate", _GEMINI_GENERATE_PRICE_PER_M)
+        t("wh.build_usage_report_text.2")
+        + _gemini_line(t("wh.build_usage_report_text.3"), "gemini_generate", _GEMINI_GENERATE_PRICE_PER_M)
         + "\n\n"
-        + _gemini_line("🔎 Gemini (הטמעות לחיפוש - הערכה, לא מדויק)", "gemini_embed", _GEMINI_EMBED_PRICE_PER_M)
+        + _gemini_line(t("wh.build_usage_report_text.4"), "gemini_embed", _GEMINI_EMBED_PRICE_PER_M)
         + "\n\n"
         + ship24_line
         + openai_report()
@@ -2506,7 +2467,7 @@ def _handle_usage_status(user: dict) -> str:
     actual content.
     """
     if not user["is_admin"]:
-        return "מידע על צריכת API זמין רק למנהל המערכת."
+        return t("wh.usage_status.1")
     return _build_usage_report_text()
 
 
@@ -2528,7 +2489,7 @@ def _format_real_billing_line() -> str:
     result = get_month_to_date_cost()
     if result is None:
         return ""
-    return f"\n\n💳 עלות אמיתית מגוגל (לפי חיוב בפועל, כולל הכל): {result['total']:.2f} {result['currency']}"
+    return t("wh.format_real_billing_line.1", total=result['total'], currency=result['currency'])
 
 
 def _handle_saved_link(user: dict, saved_link: dict) -> str:
@@ -2547,17 +2508,17 @@ def _handle_saved_link(user: dict, saved_link: dict) -> str:
     if action == "list":
         links = list_saved_links(user["id"])
         if not links:
-            return 'עדיין לא שמרת קישורים. אפשר להגיד "שמור את הקישור הזה" עם קישור.'
+            return t("wh.saved_link.1")
         lines = "\n".join(f"• {l['title'] or l['original_url']}" for l in links)
-        return f"🔗 הקישורים ששמרת:\n{lines}"
+        return t("wh.saved_link.2", lines=lines)
 
     if action == "forget":
         match = saved_link["match"]
         link = find_saved_link_by_match(user["id"], match)
         if link is None:
-            return f'לא מצאתי קישור יחיד שמתאים ל"{match}" - תוכל לדייק יותר?'
+            return t("wh.saved_link.3", match=match)
         delete_saved_link(user["id"], link["id"])
-        return f"🗑️ מחקתי: {link['title'] or link['original_url']}"
+        return t("wh.saved_link.4", p1=link['title'] or link['original_url'])
 
     # action == "save"
     url = saved_link["url"]
@@ -2582,10 +2543,10 @@ def _handle_saved_link(user: dict, saved_link: dict) -> str:
 
     title = extracted["title"] or url
     if extracted["fetch_status"] == "success":
-        return f"✅ שמרתי: {title}"
+        return t("wh.saved_link.5", title=title)
     if extracted["fetch_status"] == "paywalled":
-        return f"✅ שמרתי את הקישור ({title}), אבל נראה שרוב התוכן חסום מאחורי חומת תשלום - שמרתי מה שהצלחתי."
-    return f"⚠️ שמרתי את הקישור עצמו ({title}), אבל לא הצלחתי לשלוף את התוכן שלו."
+        return t("wh.saved_link.6", title=title)
+    return t("wh.saved_link.7", title=title)
 
 
 _SEMANTIC_SEARCH_MIN_SIMILARITY = 0.5
@@ -2606,22 +2567,22 @@ def _handle_semantic_search(user: dict, semantic_search: dict) -> str:
         query_embedding = embed_text(query)
     except Exception as e:
         print(f"[webhook] semantic search query embedding failed: {e}")
-        return "הייתה בעיה בחיפוש, ננסה שוב מאוחר יותר."
+        return t("wh.semantic_search.1")
 
     candidates = []
     for msg in get_messages_with_embeddings(user["id"]):
         score = cosine_similarity(query_embedding, msg["embedding"])
-        candidates.append((score, "שיחה", msg["raw_content"]))
+        candidates.append((score, t("wh.semantic_search.4"), msg["raw_content"]))
     for link in get_saved_links_with_embeddings(user["id"]):
         score = cosine_similarity(query_embedding, link["embedding"])
         snippet = link["content_snapshot"] or ""
-        candidates.append((score, f"קישור שמור: {link['title'] or link['original_url']}", snippet))
+        candidates.append((score, t("wh.semantic_search.5", p1=link['title'] or link['original_url']), snippet))
 
     candidates.sort(key=lambda c: c[0], reverse=True)
     top = [c for c in candidates[:_SEMANTIC_SEARCH_TOP_K] if c[0] >= _SEMANTIC_SEARCH_MIN_SIMILARITY]
 
     if not top:
-        return "לא מצאתי שום דבר רלוונטי בשיחות או בקישורים השמורים שלך."
+        return t("wh.semantic_search.2")
 
     snippets_text = "\n\n".join(f"[{source}]\n{text[:1500]}" for _, source, text in top)
     prompt = f"""המשתמש חיפש: "{query}"
@@ -2631,12 +2592,12 @@ def _handle_semantic_search(user: dict, semantic_search: dict) -> str:
 {snippets_text}
 
 ענה על החיפוש בקצרה, בהתבסס אך ורק על הקטעים האלה (אל תמציא מידע שלא מופיע בהם).
-ציין מאיזה מקור כל פרט הגיע (שיחה או קישור שמור). ענה באותה שפה שבה המשתמש חיפש.
+ציין מאיזה מקור כל פרט הגיע (שיחה או קישור שמור). {answer_language_line()}
 החזר JSON בפורמט: {{"reply": "<התשובה>"}}"""
 
     result = call_gemini_json(prompt)
     if result is None or "reply" not in result:
-        return "מצאתי כמה דברים רלוונטיים אבל לא הצלחתי לנסח תשובה, נסה שוב."
+        return t("wh.semantic_search.3")
     return result["reply"]
 
 
@@ -2730,19 +2691,19 @@ def _handle_package_status(user: dict, package_status: dict) -> str:
                     )
         except NotConnectedError:
             auth_url = build_auth_url(user["id"])
-            return f"עדיין לא חיברת את המייל שלך. הנה קישור להתחברות:\n\n{auth_url}"
+            return t("wh.package_status.1", auth_url=auth_url)
         except GoogleAuthExpiredError:
             auth_url = build_auth_url(user["id"])
-            return f"נראה שההרשאה למייל פגה או בוטלה. תוכל לחבר מחדש:\n\n{auth_url}"
+            return t("wh.package_status.2", auth_url=auth_url)
         except Exception as e:
             print(f"[webhook] package_status gmail scan failed: {e}")
             # Don't give up entirely - still try to report on already-tracked packages
 
     packages = list_tracked_packages(user["id"])
     if not packages:
-        return "לא מצאתי חבילות במעקב. תוודא שקיבלת מייל אישור משלוח עם מספר מעקב."
+        return t("wh.package_status.3")
 
-    lines = ["📦 סטטוס חבילות:"]
+    lines = [t("wh.package_status.5")]
     for pkg in packages:
         status = pkg["last_status"]
         needs_check = True
@@ -2753,17 +2714,17 @@ def _handle_package_status(user: dict, package_status: dict) -> str:
         if needs_check:
             try:
                 result = get_tracking_status(pkg["tracking_number"])
-                status = result["status_milestone"] or "לא ידוע"
+                status = result["status_milestone"] or _UNKNOWN_PACKAGE_STATUS
                 update_package_status(pkg["id"], status)
             except ShippingNotConfiguredError:
-                return "החיבור ל-Ship24 עדיין לא מוגדר (חסר SHIP24_API_KEY)."
+                return t("wh.package_status.4")
             except Exception as e:
                 print(f"[webhook] ship24 status check failed for package {pkg['id']}: {e}")
-                status = status or "לא זמין כרגע"
+                status = status or t("wh.package_status.7")
 
         label = pkg["description"] or pkg["tracking_number"]
         courier = f" ({pkg['courier_code']})" if pkg["courier_code"] else ""
-        lines.append(f"• {label}{courier}: {status or 'לא ידוע'}")
+        lines.append(f"• {label}{courier}: {package_status_label(status or _UNKNOWN_PACKAGE_STATUS)}")
 
     return "\n".join(lines)
 
@@ -2778,13 +2739,13 @@ def _handle_email_read(user: dict, email_read: dict) -> str:
         return format_emails_for_reply(emails)
     except NotConnectedError:
         auth_url = build_auth_url(user["id"])
-        return f"עדיין לא חיברת את הג'ימייל שלך. הנה קישור להתחברות:\n\n{auth_url}"
+        return t("wh.email_read.1", auth_url=auth_url)
     except GoogleAuthExpiredError:
         auth_url = build_auth_url(user["id"])
-        return f"נראה שההרשאה למייל פגה או בוטלה. תוכל לחבר מחדש:\n\n{auth_url}"
+        return t("wh.package_status.2", auth_url=auth_url)
     except Exception as e:
         print(f"[webhook] email read failed: {e}")
-        return "הייתה בעיה בקריאת המיילים, ננסה שוב מאוחר יותר."
+        return t("wh.email_read.2")
 
 
 def _handle_email_draft(user: dict, email_draft: dict, gemini_reply: str) -> str:
@@ -2796,12 +2757,12 @@ def _handle_email_draft(user: dict, email_draft: dict, gemini_reply: str) -> str
     """
     to_address = (email_draft.get("to") or "").strip()
     if not to_address or "@" not in to_address:
-        return 'צריך כתובת מייל תקינה של הנמען כדי להכין טיוטה — למי לשלוח, ומה הכתובת?'
+        return t("wh.email_draft.1")
 
     # Guard: never create a second draft while one is already pending (even if
     # Gemini missed the instruction not to)
     if get_pending_draft(user["id"]) is not None:
-        return "יש לך כבר טיוטת מייל ממתינה לאישור. תגיד לי קודם 'שלח', 'בטל', או מה לשנות בה."
+        return t("wh.email_draft.2")
 
     save_email_draft(user["id"], to_address, email_draft.get("subject", ""), email_draft.get("body", ""))
     return gemini_reply
@@ -2823,7 +2784,7 @@ def _handle_email_action_tool(user: dict, args: dict) -> str:
 def _handle_email_action(user: dict, email_action: dict, pending_draft) -> str:
     """Handles a response to a pending draft: actually sending, cancelling, or editing."""
     if pending_draft is None:
-        return "אין לי טיוטת מייל ממתינה כרגע לפעולה הזו."
+        return t("wh.email_action.1")
 
     action = email_action["action"]
 
@@ -2836,34 +2797,30 @@ def _handle_email_action(user: dict, email_action: dict, pending_draft) -> str:
                 pending_draft["body"],
             )
             update_draft_status(pending_draft["id"], "sent", user["id"])
-            return f"✅ נשלח ל-{pending_draft['to_address']}"
+            return t("wh.email_action.2", to_address=pending_draft['to_address'])
         except NotConnectedError:
             auth_url = build_auth_url(user["id"])
-            return f"עדיין לא חיברת את הג'ימייל שלך. הנה קישור להתחברות:\n\n{auth_url}"
+            return t("wh.email_read.1", auth_url=auth_url)
         except GoogleAuthExpiredError:
             auth_url = build_auth_url(user["id"])
-            return f"נראה שההרשאה למייל פגה או בוטלה. תוכל לחבר מחדש:\n\n{auth_url}"
+            return t("wh.package_status.2", auth_url=auth_url)
         except Exception as e:
             print(f"[webhook] email send failed: {e}")
-            return "הייתה בעיה בשליחת המייל, ננסה שוב מאוחר יותר. הטיוטה עדיין שמורה."
+            return t("wh.email_action.3")
 
     if action == "cancel":
         update_draft_status(pending_draft["id"], "cancelled", user["id"])
-        return "בסדר, ביטלתי את הטיוטה."
+        return t("wh.email_action.4")
 
     # action == "edit"
     instructions = email_action.get("edit_instructions") or ""
     revised = revise_email_draft(pending_draft["subject"], pending_draft["body"], instructions)
     if revised is None:
-        return "לא הצלחתי לעדכן את הטיוטה, תוכל לנסח את השינוי בצורה אחרת?"
+        return t("wh.email_action.5")
 
     update_draft_body(pending_draft["id"], revised["subject"], revised["body"], user["id"])
     return (
-        f"הנה הטיוטה המעודכנת:\n"
-        f"אל: {pending_draft['to_address']}\n"
-        f"נושא: {revised['subject']}\n\n"
-        f"{revised['body']}\n\n"
-        f"לשלוח?"
+        t("wh.email_action.6", to_address=pending_draft['to_address'], subject=revised['subject'], body=revised['body'])
     )
 
 
@@ -2882,25 +2839,25 @@ def _handle_email_analyze(user: dict, email_analyze: dict) -> str:
             query = email_analyze["query"]
             thread_id = find_thread_id_by_query(user["id"], query)
             if thread_id is None:
-                return f'לא מצאתי מייל שמתאים ל"{query}", אפשר לנסות לתאר אחרת?'
+                return t("wh.email_analyze.1", query=query)
 
             messages = get_thread_messages(user["id"], thread_id)
             summary_result = summarize_thread(messages)
             if summary_result is None:
-                return "הייתה בעיה בסיכום השרשור, ננסה שוב מאוחר יותר."
+                return t("wh.email_analyze.2")
 
             subject = messages[-1]["subject"] if messages else query
             return format_thread_summary_for_reply(subject, summary_result)
 
     except NotConnectedError:
         auth_url = build_auth_url(user["id"])
-        return f"עדיין לא חיברת את הג'ימייל שלך. הנה קישור להתחברות:\n\n{auth_url}"
+        return t("wh.email_read.1", auth_url=auth_url)
     except GoogleAuthExpiredError:
         auth_url = build_auth_url(user["id"])
-        return f"נראה שההרשאה למייל פגה או בוטלה. תוכל לחבר מחדש:\n\n{auth_url}"
+        return t("wh.package_status.2", auth_url=auth_url)
     except Exception as e:
         print(f"[webhook] email analyze failed: {e}")
-        return "הייתה בעיה בניתוח המייל, ננסה שוב מאוחר יותר."
+        return t("wh.email_analyze.3")
 
 
 def _handle_watch_manage(user: dict, watch_manage: dict) -> str:
@@ -2917,12 +2874,12 @@ def _handle_watch_manage(user: dict, watch_manage: dict) -> str:
     if action == "list":
         watches = list_active_watches(user["id"])
         if not watches:
-            return "אין לך כרגע שום דבר במעקב."
+            return t("wh.watch_manage.1")
         lines = [
             f"{i}. {WATCH_TYPE_LABELS.get(w['watch_type'], w['watch_type'])}: {w['label'] or w['target']}"
             for i, w in enumerate(watches, start=1)
         ]
-        return "מה שאתה עוקב אחריו:\n\n" + "\n".join(lines)
+        return t("wh.watch_manage.6") + "\n".join(lines)
 
     if action == "cancel":
         match = watch_manage["match"]
@@ -2931,10 +2888,10 @@ def _handle_watch_manage(user: dict, watch_manage: dict) -> str:
             if match.lower() in (w["label"] or w["target"] or "").lower()
         ]
         if not candidates:
-            return f'לא מצאתי מעקב שמתאים ל"{match}".'
+            return t("wh.watch_manage.2", match=match)
         target = candidates[0]
         deactivate_watch(target["id"], user["id"])
-        return f"בסדר, הפסקתי לעקוב אחרי {target['label'] or target['target']}."
+        return t("wh.watch_manage.3", p1=target['label'] or target['target'])
 
     # action == "add"
     watch_type = watch_manage["watch_type"]
@@ -2942,7 +2899,7 @@ def _handle_watch_manage(user: dict, watch_manage: dict) -> str:
     if watch_type == "web_page":
         url = watch_manage["url"]
         add_watch(user["id"], "web_page", url, url)
-        return f"בסדר, אני אעקוב אחרי העמוד ואעדכן אותך אם הוא ישתנה:\n{url}"
+        return t("wh.watch_manage.4", url=url)
 
     # watch_type == "email_reply"
     query = watch_manage["query"]
@@ -2950,16 +2907,16 @@ def _handle_watch_manage(user: dict, watch_manage: dict) -> str:
         thread_id = find_thread_id_by_query(user["id"], query)
     except NotConnectedError:
         auth_url = build_auth_url(user["id"])
-        return f"עדיין לא חיברת את הג'ימייל שלך. הנה קישור להתחברות:\n\n{auth_url}"
+        return t("wh.email_read.1", auth_url=auth_url)
     except GoogleAuthExpiredError:
         auth_url = build_auth_url(user["id"])
-        return f"נראה שההרשאה למייל פגה או בוטלה. תוכל לחבר מחדש:\n\n{auth_url}"
+        return t("wh.package_status.2", auth_url=auth_url)
 
     if thread_id is None:
-        return f'לא מצאתי מייל שמתאים ל"{query}", אפשר לנסות לתאר אחרת?'
+        return t("wh.email_analyze.1", query=query)
 
     add_watch(user["id"], "email_reply", thread_id, query)
-    return f'בסדר, אעדכן אותך כשתגיע תשובה במייל "{query}".'
+    return t("wh.watch_manage.5", query=query)
 
 
 def _handle_reminder_manage(user: dict, reminder_manage: dict) -> str:
@@ -2976,18 +2933,18 @@ def _handle_reminder_manage(user: dict, reminder_manage: dict) -> str:
 
     if reminder_manage["action"] == "list":
         if not reminders:
-            return "אין לך תזכורות מתוזמנות כרגע."
+            return t("wh.reminder_manage.1")
         lines = []
         for i, r in enumerate(reminders, start=1):
             schedule_desc = format_schedule_description(
                 r["schedule_type"], r["schedule_time"], r["schedule_days"], user["timezone"]
             )
-            recipient = f" (ל{r['recipient_name']})" if r["recipient_name"] else ""
+            recipient = t("wh.reminder_manage.11", recipient_name=r['recipient_name']) if r["recipient_name"] else ""
             lines.append(f"{i}. {r['content']}{recipient}\n   {schedule_desc}")
-        return "📋 התזכורות שלך:\n\n" + "\n\n".join(lines)
+        return t("wh.reminder_manage.12") + "\n\n".join(lines)
 
     if not reminders:
-        return "אין לך תזכורות פעילות."
+        return t("wh.reminder_manage.2")
 
     action = reminder_manage["action"]
     match_content = (reminder_manage.get("match_content") or "").strip()
@@ -2997,7 +2954,7 @@ def _handle_reminder_manage(user: dict, reminder_manage: dict) -> str:
     if not match_content and action == "snooze":
         target = get_last_sent_reminder(user["id"])
         if target is None:
-            return "אין לי תזכורת מתאימה לדחות."
+            return t("wh.reminder_manage.3")
     else:
         target = _match_reminder(reminders, match_content)
         if isinstance(target, str):
@@ -3005,13 +2962,13 @@ def _handle_reminder_manage(user: dict, reminder_manage: dict) -> str:
 
     if action == "cancel":
         deactivate_reminder(target["id"], user["id"])
-        return f'✅ ביטלתי: "{target["content"]}"'
+        return t("wh.reminder_manage.4", content=target["content"])
 
     if action == "edit_content":
         new_content = reminder_manage["new_content"]
         if not update_reminder_content(target["id"], user["id"], new_content):
-            return "לא הצלחתי לעדכן את התזכורת."
-        return f'✅ עדכנתי: "{new_content}"'
+            return t("wh.reminder_manage.5")
+        return t("wh.reminder_manage.6", new_content=new_content)
 
     if action == "snooze":
         minutes = int(reminder_manage["snooze_minutes"])
@@ -3025,9 +2982,9 @@ def _handle_reminder_manage(user: dict, reminder_manage: dict) -> str:
             target["id"], user["id"], "once",
             local.strftime("%Y-%m-%dT%H:%M:%S"), None, new_trigger,
         ):
-            return "לא הצלחתי לדחות את התזכורת."
-        note = "\n(שים לב: זו הייתה תזכורת חוזרת, ועכשיו היא חד-פעמית)" if was_recurring else ""
-        return f'⏰ דחיתי ל-{local.strftime("%H:%M")}: "{target["content"]}"{note}'
+            return t("wh.reminder_manage.7")
+        note = t("wh.reminder_manage.13") if was_recurring else ""
+        return t("wh.reminder_manage.8", p1=local.strftime("%H:%M"), content=target["content"], note=note)
 
     # action == "reschedule"
     schedule_type = reminder_manage["schedule_type"]
@@ -3042,17 +2999,17 @@ def _handle_reminder_manage(user: dict, reminder_manage: dict) -> str:
         )
     except ValueError as e:
         print(f"[webhook] reschedule failed: {e}")
-        return "לא הבנתי לאיזה זמן להעביר את התזכורת, תוכל לנסח אחרת?"
+        return t("wh.reminder_manage.9")
 
     if not update_reminder_schedule(
         target["id"], user["id"], schedule_type, schedule_time, schedule_days, next_trigger
     ):
-        return "לא הצלחתי לעדכן את התזכורת."
+        return t("wh.reminder_manage.5")
 
     description = format_schedule_description(
         schedule_type, schedule_time, schedule_days, user["timezone"]
     )
-    return f'✅ העברתי את "{target["content"]}" ל: {description}'
+    return t("wh.reminder_manage.10", content=target["content"], description=description)
 
 
 def _match_reminder(reminders, match_content: str):
@@ -3064,7 +3021,7 @@ def _match_reminder(reminders, match_content: str):
     worse than asking.
     """
     if not match_content:
-        return 'על איזו תזכורת מדובר? תוכל לתאר אותה, או להגיד "מה יש לי מתוזמן" לרשימה המלאה.'
+        return t("wh.match_reminder.1")
 
     scored = []
     for r in reminders:
@@ -3078,10 +3035,10 @@ def _match_reminder(reminders, match_content: str):
     second_score = scored[1][0] if len(scored) > 1 else 0.0
 
     if best_score < 0.4:  # Stricter threshold, tuned empirically - avoids false positives on short strings
-        return 'לא הצלחתי לזהות איזו תזכורת התכוונת. תגיד "מה יש לי מתוזמן" כדי לראות את הרשימה המלאה.'
+        return t("wh.match_reminder.2")
 
     if best_score - second_score < 0.15 and second_score >= 0.4:
-        return 'יש לי כמה תזכורות שמתאימות לתיאור, תוכל לדייק? (תגיד "מה יש לי מתוזמן" לרשימה המלאה)'
+        return t("wh.match_reminder.3")
 
     return best
 
@@ -3119,7 +3076,7 @@ def _handle_user_manage(user: dict, user_manage: dict) -> str:
       disable themselves and get locked out
     """
     if not user["is_admin"]:
-        return "ניהול משתמשים זמין רק למנהל המערכת."
+        return t("wh.user_manage.1")
 
     action = user_manage["action"]
 
@@ -3130,23 +3087,23 @@ def _handle_user_manage(user: dict, user_manage: dict) -> str:
             status = "✅" if u["is_active"] else "🚫"
             admin_mark = " 👑" if u["is_admin"] else ""
             lines.append(f"{status} {u['display_name']}{admin_mark} — {u['whatsapp_number']}")
-        return "👥 משתמשי הבוט:\n" + "\n".join(lines)
+        return t("wh.user_manage.11") + "\n".join(lines)
 
     number = _normalize_number(user_manage.get("whatsapp_number") or "")
     if not (11 <= len(number) <= 15):
-        return "המספר לא נראה תקין. תוכל לתת אותו בפורמט בינלאומי, למשל 972501234567?"
+        return t("wh.user_manage.2")
 
     if action == "add":
         existing = get_user_by_number_any_status(number)
         if existing is not None:
             if existing["is_active"]:
-                return f"{existing['display_name']} כבר משתמש פעיל."
+                return t("wh.user_manage.3", display_name=existing['display_name'])
             admin_set_user_active(existing["id"], True)
-            return f"✅ הפעלתי מחדש את {existing['display_name']} ({number})."
+            return t("wh.user_manage.4", display_name=existing['display_name'], number=number)
 
         display_name = (user_manage.get("display_name") or "").strip() or f"User {number[-4:]}"
         if not admin_add_user(number, display_name):
-            return "לא הצלחתי להוסיף את המשתמש, תוכל לנסות שוב?"
+            return t("wh.user_manage.5")
         # Best effort and never raises: send the one-time privacy/terms welcome (needs PUBLIC_BASE_URL).
         from src.welcome import send_welcome_if_needed
 
@@ -3154,22 +3111,20 @@ def _handle_user_manage(user: dict, user_manage: dict) -> str:
         if new_user is not None:
             send_welcome_if_needed(new_user["id"])
         return (
-            f"✅ {display_name} ({number}) יכול עכשיו להשתמש בבוט.\n"
-            f"כדאי שישלח הודעה כלשהי כדי להתחיל — זה גם פותח את חלון 24 השעות "
-            f"שמאפשר לשלוח אליו תזכורות."
+            t("wh.user_manage.6", display_name=display_name, number=number)
         )
 
     # action == "disable"
     target = get_user_by_number_any_status(number)
     if target is None:
-        return f"לא מצאתי משתמש עם המספר {number}."
+        return t("wh.user_manage.7", number=number)
     if target["id"] == user["id"]:
-        return "אני לא אשבית אותך מעצמך — תעשה את זה מהדאשבורד אם אתה בטוח."
+        return t("wh.user_manage.8")
     if not target["is_active"]:
-        return f"{target['display_name']} כבר מושבת."
+        return t("wh.user_manage.9", display_name=target['display_name'])
 
     admin_set_user_active(target["id"], False)
-    return f"🚫 {target['display_name']} ({number}) כבר לא יכול להשתמש בבוט. הנתונים שלו נשמרו."
+    return t("wh.user_manage.10", display_name=target['display_name'], number=number)
 
 
 def _handle_memory(user: dict, memory: dict) -> str:
@@ -3185,27 +3140,27 @@ def _handle_memory(user: dict, memory: dict) -> str:
     if action == "list":
         facts = list_user_facts(user["id"])
         if not facts:
-            return 'עדיין לא ביקשת ממני לזכור שום דבר. אפשר להגיד למשל: "תזכור שאני צמחוני".'
+            return t("wh.memory.1")
         lines = "\n".join(f"• {f['fact_value']}" for f in facts)
-        return f"🧠 מה שביקשת שאזכור:\n{lines}\n\nאפשר להגיד לי לשכוח כל אחד מהם."
+        return t("wh.memory.2", lines=lines)
 
     if action == "forget_all":
         removed = delete_all_user_facts(user["id"])
         if removed == 0:
-            return "לא היה לי מה לשכוח."
-        return f"🗑️ מחקתי הכל ({removed} דברים). אני לא זוכר עליך שום דבר עכשיו."
+            return t("wh.memory.3")
+        return t("wh.memory.4", removed=removed)
 
     if action == "forget":
         fact_key = memory["fact_key"]
         if delete_user_fact(user["id"], fact_key):
-            return "🗑️ שכחתי את זה."
+            return t("wh.memory.5")
         # The key Gemini produced does not exist - show what does, so the user
         # can point at the right thing instead of guessing again.
         facts = list_user_facts(user["id"])
         if not facts:
-            return "אין לי כרגע שום דבר שמור עליך."
+            return t("wh.memory.6")
         lines = "\n".join(f"• {f['fact_value']}" for f in facts)
-        return f"לא מצאתי את זה. הנה מה שכן שמור:\n{lines}"
+        return t("wh.memory.7", lines=lines)
 
     # action == "save"
     fact_key = memory["fact_key"]
@@ -3214,13 +3169,12 @@ def _handle_memory(user: dict, memory: dict) -> str:
 
     if not save_user_fact(user["id"], fact_key, fact_value):
         return (
-            f"הגעתי למקסימום של {MAX_FACTS_PER_USER} דברים שאני זוכר עליך. "
-            f'תגיד לי מה לשכוח קודם (אפשר "מה אתה זוכר עליי?" כדי לראות את הרשימה).'
+            t("wh.memory.8", MAX_FACTS_PER_USER=MAX_FACTS_PER_USER)
         )
 
     if fact_key in existing_keys:
-        return f"✅ עדכנתי: {fact_value}"
-    return f"✅ אזכור את זה: {fact_value}"
+        return t("wh.memory.9", fact_value=fact_value)
+    return t("wh.memory.10", fact_value=fact_value)
 
 
 def _match_task(tasks, match: str):
@@ -3233,22 +3187,22 @@ def _match_task(tasks, match: str):
     item is the failure a user would not notice until the thing was missing.
     """
     if not tasks:
-        return None, "הרשימה ריקה, אין מה לסמן או למחוק."
+        return None, t("wh.match_task.1")
 
     needle = (match or "").strip().lower()
-    exact = [t for t in tasks if t["content"].strip().lower() == needle]
+    exact = [task for task in tasks if task["content"].strip().lower() == needle]
     if len(exact) == 1:
         return exact[0], None
 
-    partial = [t for t in tasks if needle and needle in t["content"].lower()]
+    partial = [task for task in tasks if needle and needle in task["content"].lower()]
     if len(partial) == 1:
         return partial[0], None
     if len(partial) > 1:
-        options = "\n".join(f"• {t['content']}" for t in partial)
-        return None, f'יש כמה פריטים שמתאימים ל"{match}":\n{options}\n\nלאיזה מהם התכוונת?'
+        options = "\n".join(f"• {task['content']}" for task in partial)
+        return None, t("wh.match_task.2", match=match, options=options)
 
-    options = "\n".join(f"• {t['content']}" for t in tasks)
-    return None, f'לא מצאתי "{match}" ברשימה. מה שיש:\n{options}'
+    options = "\n".join(f"• {task['content']}" for task in tasks)
+    return None, t("wh.match_task.3", match=match, options=options)
 
 
 def _handle_task_manage(user: dict, task_manage: dict) -> str:
@@ -3271,36 +3225,35 @@ def _handle_task_manage(user: dict, task_manage: dict) -> str:
 
     action = task_manage["action"]
     named_list = (task_manage.get("list_name") or "").strip()
-    where = f" ל{named_list}" if named_list else ""
+    where = t("wh.task_manage.8", named_list=named_list) if named_list else ""
 
     if action == "add":
         content = task_manage["content"]
         if not add_task(user["id"], content, named_list or "default"):
             return (
-                f"יש כבר {MAX_OPEN_TASKS_PER_USER} פריטים פתוחים ברשימות שלך. "
-                f'צריך לסמן כמה שבוצעו לפני שאפשר להוסיף עוד — תגיד "מה יש לי ברשימה" כדי לראות.'
+                t("wh.task_manage.1", MAX_OPEN_TASKS_PER_USER=MAX_OPEN_TASKS_PER_USER)
             )
         remaining = len(list_tasks(user["id"], named_list or None))
-        return f"✅ נוסף{where}: {content}  ({remaining} פריטים)"
+        return t("wh.task_manage.2", where=where, content=content, remaining=remaining)
 
     if action == "list":
         tasks = list_tasks(user["id"], named_list or None)
         if not tasks:
-            return 'הרשימה ריקה. אפשר להוסיף למשל: "תוסיף חלב לרשימת הקניות".'
+            return t("wh.task_manage.3")
         by_list: dict[str, list[str]] = {}
-        for t in tasks:
-            by_list.setdefault(t["list_name"], []).append(t["content"])
+        for task in tasks:
+            by_list.setdefault(task["list_name"], []).append(task["content"])
         blocks = []
         for name, items in by_list.items():
-            header = "📋 הרשימה:" if name == "default" else f"📋 {name}:"
+            header = t("wh.task_manage.9") if name == "default" else f"📋 {name}:"
             blocks.append(header + "\n" + "\n".join(f"• {c}" for c in items))
         return "\n\n".join(blocks)
 
     if action == "clear":
         removed = clear_tasks(user["id"], named_list or None)
         if removed == 0:
-            return "אין מה למחוק, הרשימה כבר ריקה."
-        return f"🗑️ רוקנתי את הרשימה ({removed} פריטים)."
+            return t("wh.task_manage.4")
+        return t("wh.task_manage.5", removed=removed)
 
     # done / delete - both must identify exactly one item first
     tasks = list_tasks(user["id"], named_list or None)
@@ -3311,11 +3264,11 @@ def _handle_task_manage(user: dict, task_manage: dict) -> str:
     if action == "done":
         set_task_done(user["id"], hit["id"])
         remaining = len(list_tasks(user["id"], named_list or None))
-        tail = f"  (נשארו {remaining})" if remaining else "  הרשימה ריקה עכשיו 🎉"
-        return f"✔️ בוצע: {hit['content']}{tail}"
+        tail = t("wh.task_manage.10", remaining=remaining) if remaining else t("wh.task_manage.11")
+        return t("wh.task_manage.6", content=hit['content'], tail=tail)
 
     delete_task(user["id"], hit["id"])
-    return f"🗑️ נמחק מהרשימה: {hit['content']}"
+    return t("wh.task_manage.7", content=hit['content'])
 
 
 def _handle_kids_schedule(user: dict, args: dict) -> str:
@@ -3333,10 +3286,9 @@ def _handle_kids_schedule(user: dict, args: dict) -> str:
         content = args["content"].strip()
         if not upsert_kid_schedule_day(user["id"], kid_name, day_of_week, content):
             return (
-                f"יש כבר {MAX_KIDS_SCHEDULE_ROWS_PER_USER} ימים שמורים במערכות שלך. "
-                f"צריך למחוק כמה לפני שאפשר להוסיף עוד."
+                t("wh.kids_schedule.1", MAX_KIDS_SCHEDULE_ROWS_PER_USER=MAX_KIDS_SCHEDULE_ROWS_PER_USER)
             )
-        return f"✅ עדכנתי את המערכת של {kid_name} ליום {_HEBREW_DAY_NAMES[day_of_week]}: {content}"
+        return t("wh.kids_schedule.2", kid_name=kid_name, p2=day_name(day_of_week), content=content)
 
     if action == "set_week":
         kid_name = args["kid_name"].strip()
@@ -3346,19 +3298,16 @@ def _handle_kids_schedule(user: dict, args: dict) -> str:
             content = entry["content"].strip()
             if not upsert_kid_schedule_day(user["id"], kid_name, day_of_week, content):
                 if saved_days:
-                    saved_hebrew = ", ".join(_HEBREW_DAY_NAMES[d] for d in saved_days)
+                    saved_hebrew = ", ".join(day_name(d) for d in saved_days)
                     return (
-                        f"שמרתי חלק מהמערכת של {kid_name} ({saved_hebrew}), אבל הגעת למגבלה של "
-                        f"{MAX_KIDS_SCHEDULE_ROWS_PER_USER} ימים שמורים במערכות שלך - צריך למחוק "
-                        f"כמה לפני שאפשר להמשיך."
+                        t("wh.kids_schedule.3", kid_name=kid_name, saved_hebrew=saved_hebrew, MAX_KIDS_SCHEDULE_ROWS_PER_USER=MAX_KIDS_SCHEDULE_ROWS_PER_USER)
                     )
                 return (
-                    f"יש כבר {MAX_KIDS_SCHEDULE_ROWS_PER_USER} ימים שמורים במערכות שלך. "
-                    f"צריך למחוק כמה לפני שאפשר להוסיף עוד."
+                    t("wh.kids_schedule.1", MAX_KIDS_SCHEDULE_ROWS_PER_USER=MAX_KIDS_SCHEDULE_ROWS_PER_USER)
                 )
             saved_days.append(day_of_week)
-        saved_hebrew = ", ".join(_HEBREW_DAY_NAMES[d] for d in saved_days)
-        return f"✅ שמרתי את המערכת של {kid_name} ל-{len(saved_days)} ימים: {saved_hebrew}."
+        saved_hebrew = ", ".join(day_name(d) for d in saved_days)
+        return t("wh.kids_schedule.4", kid_name=kid_name, count=len(saved_days), saved_hebrew=saved_hebrew)
 
     if action == "list":
         kid_name = (args.get("kid_name") or "").strip()
@@ -3372,14 +3321,14 @@ def _handle_kids_schedule(user: dict, args: dict) -> str:
                 owner_user_id, matched_kid_name = match
                 rows = get_kid_schedule(owner_user_id, matched_kid_name)
         if not rows:
-            who = f" ל{kid_name}" if kid_name else ""
-            return f'אין עדיין מערכת שמורה{who}. אפשר להוסיף למשל: "תוסיף למערכת של דני ביום שני חשבון בשמונה".'
+            who = t("wh.kids_schedule.9", kid_name=kid_name) if kid_name else ""
+            return t("wh.kids_schedule.5", who=who)
         by_kid: dict[str, dict[str, str]] = {}
         for r in rows:
             by_kid.setdefault(r["kid_name"], {})[r["day_of_week"]] = r["content"]
         blocks = []
         for kid, days in by_kid.items():
-            lines = [f"• {_HEBREW_DAY_NAMES[d]}: {days[d]}" for d in _WEEKDAY_NAMES if d in days]
+            lines = [f"• {day_name(d)}: {days[d]}" for d in _WEEKDAY_NAMES if d in days]
             blocks.append(f"📚 {kid}:\n" + "\n".join(lines))
         return "\n\n".join(blocks)
 
@@ -3388,10 +3337,10 @@ def _handle_kids_schedule(user: dict, args: dict) -> str:
     day_of_week = args.get("day_of_week")
     removed = delete_kid_schedule_day(user["id"], kid_name, day_of_week)
     if removed == 0:
-        return f"לא מצאתי מה למחוק במערכת של {kid_name}."
+        return t("wh.kids_schedule.6", kid_name=kid_name)
     if day_of_week:
-        return f"🗑️ מחקתי את יום {_HEBREW_DAY_NAMES[day_of_week]} מהמערכת של {kid_name}."
-    return f"🗑️ מחקתי את כל המערכת של {kid_name} ({removed} ימים)."
+        return t("wh.kids_schedule.7", p1=day_name(day_of_week), kid_name=kid_name)
+    return t("wh.kids_schedule.8", kid_name=kid_name, removed=removed)
 
 
 def _handle_morning_brief(user: dict) -> str:
@@ -3444,20 +3393,19 @@ def _handle_daily_meetings_summary(user: dict, args: dict) -> str:
         now = datetime.now(tz)
         hour, minute = (int(p) for p in effective_time.split(":"))
         today_slot = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-        first_send = "היום" if now < today_slot else "מחר"
+        first_send = t("wh.gemini_line.1") if now < today_slot else t("wh.daily_meetings_summary.5")
         return (
-            f"✅ הפעלתי. תקבל כל בוקר ב-{effective_time} סיכום אוטומטי של הפגישות שלך באותו יום "
-            f"(אפשר תמיד לבקש ממני לשנות את השעה). הסיכום הראשון יישלח {first_send} ב-{effective_time}."
+            t("wh.daily_meetings_summary.1", effective_time=effective_time, first_send=first_send)
         )
 
     if action == "disable":
         set_daily_meetings_summary_enabled(user["id"], False)
-        return "🔕 כיביתי את הסיכום היומי האוטומטי. אפשר תמיד לבקש ממני סיכום ידני."
+        return t("wh.daily_meetings_summary.2")
 
     enabled = get_daily_meetings_summary_enabled(user["id"])
     if not enabled:
-        return "🔕 הסיכום היומי האוטומטי כבוי אצלך."
-    return f"✅ הסיכום היומי האוטומטי פעיל אצלך ({get_daily_meetings_summary_time(user['id'])})."
+        return t("wh.daily_meetings_summary.3")
+    return t("wh.daily_meetings_summary.4", p1=get_daily_meetings_summary_time(user['id']))
 
 
 def _extract_package_with_provider(body: str, provider: str):

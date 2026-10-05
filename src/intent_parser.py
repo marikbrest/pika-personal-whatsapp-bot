@@ -41,9 +41,10 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from src.config import DEFAULT_TIMEZONE
+from src.i18n import answer_language_line, t
 from src.integrations.gemini import call_gemini_json, call_gemini_json_with_media
 
-FALLBACK_REPLY = "לא הבנתי, תוכל לנסח אחרת?"
+FALLBACK_REPLY = t("intent.fallback_reply")  # LOCALE is fixed per process, so resolving at import keeps `reply == FALLBACK_REPLY` checks consistent
 
 _RESPONSE_SCHEMA = """נתח את ההודעה וסווג אותה לאחת מ-24 קטגוריות, והחזר JSON בפורמט מדויק:
 
@@ -442,6 +443,7 @@ def _build_text_prompt(
     return f"""אתה עוזר אישי שמנתח הודעות טקסט בעברית או אנגלית ומחזיר JSON בלבד.
 
 {header}
+{answer_language_line()}
 ההודעה החדשה מהמשתמש: "{text}"
 
 {schema}"""
