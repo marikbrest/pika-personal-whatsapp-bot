@@ -1,0 +1,11 @@
+# Automatic HTTPS in front of Pika. Replace the two hostnames, point their DNS A/AAAA records at this
+# machine, and open ports 80 and 443. Caddy fetches and renews the certificates by itself.
+assistant.example.com {
+	reverse_proxy 127.0.0.1:8000
+}
+
+# The admin dashboard is served on ADMIN_HOST. Put it behind Cloudflare Access or another identity-aware
+# proxy (see README); do NOT expose it bare to the internet.
+# admin.example.com {
+# 	reverse_proxy 127.0.0.1:8000
+# }

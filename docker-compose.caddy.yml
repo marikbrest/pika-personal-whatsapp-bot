@@ -1,0 +1,20 @@
+# Alternative to the Cloudflare Tunnel profile: automatic HTTPS with Caddy.
+#   1. set PIKA_DOMAIN=assistant.example.com in .env and point its DNS at this machine
+#   2. open ports 80 and 443
+#   3. docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PIKA_DOMAIN: ${PIKA_DOMAIN:?set PIKA_DOMAIN in .env}
+    command: caddy reverse-proxy --from ${PIKA_DOMAIN} --to bot:8000
+    volumes:
+      - caddy-data:/data
+    depends_on: [bot]
+
+volumes:
+  caddy-data:

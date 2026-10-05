@@ -252,7 +252,7 @@ and email content is sent to Gemini for classification/wording only; see
 
 Using Claude Code? Open this folder in it - [CLAUDE.md](./CLAUDE.md) walks it through installing and changing the project.
 
-Guides: [Meta/WhatsApp setup](./docs/SETUP_META.md) · [Troubleshooting](./TROUBLESHOOTING.md) · [Costs](./docs/COSTS.md) · [Privacy notes for operators](./docs/PRIVACY_FOR_OPERATORS.md) ([עברית](./docs/PRIVACY_FOR_OPERATORS.he.md)) · [Terms & privacy pages](./docs/TERMS_TEMPLATE.md) ([עברית](./docs/TERMS_TEMPLATE.he.md)) · [Adding a capability](./docs/ADDING_A_TOOL.md) · [AI providers](./docs/ADDING_A_PROVIDER.md) · [Roadmap](./ROADMAP.md) · [Changelog](./CHANGELOG.md) · [Contributing](./CONTRIBUTING.md)
+Guides: [Meta/WhatsApp setup](./docs/SETUP_META.md) · [Deploying on Linux](./docs/DEPLOY.md) · [Troubleshooting](./TROUBLESHOOTING.md) · [Costs](./docs/COSTS.md) · [Privacy notes for operators](./docs/PRIVACY_FOR_OPERATORS.md) ([עברית](./docs/PRIVACY_FOR_OPERATORS.he.md)) · [Terms & privacy pages](./docs/TERMS_TEMPLATE.md) ([עברית](./docs/TERMS_TEMPLATE.he.md)) · [Adding a capability](./docs/ADDING_A_TOOL.md) · [AI providers](./docs/ADDING_A_PROVIDER.md) · [Roadmap](./ROADMAP.md) · [Changelog](./CHANGELOG.md) · [Contributing](./CONTRIBUTING.md)
 
 ### Google Cloud OAuth setup gotcha
 
