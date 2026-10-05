@@ -12,7 +12,8 @@ issue; see [CONTRIBUTING.md](./CONTRIBUTING.md) and [docs/ADDING_A_TOOL.md](./do
   ([docs/ADDING_A_PROVIDER.md](./docs/ADDING_A_PROVIDER.md)); Anthropic or a local OpenAI-compatible server would each be one adapter
   module plus a registry entry.
 - **Other channels.** WhatsApp specifics live in `src/integrations/whatsapp.py` and the webhook;
-  a Telegram (or Signal/Matrix) adapter would reuse the whole tool pipeline.
+  a Signal/Matrix adapter would reuse the whole tool pipeline. Telegram is done, in its own repository:
+  [pika-telegram-bot](https://github.com/marikbrest/pika-telegram-bot).
 - **Deployment recipes:** systemd and Caddy are done (`docs/DEPLOY.md`); a Traefik example and a Kubernetes manifest are open.
 - **Welcome message for new users** with the privacy policy and terms links ([#17](https://github.com/marikbrest/pika-personal-whatsapp-bot/issues/17)).
 - **`scripts/delete_user.py`**: remove a user and all their data in one step ([#18](https://github.com/marikbrest/pika-personal-whatsapp-bot/issues/18)).

@@ -4,6 +4,9 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Note
+- A Telegram edition now exists as a separate repository, [pika-telegram-bot](https://github.com/marikbrest/pika-telegram-bot) (split off from this code; WhatsApp is not part of it).
+
 ### Added
 - **`LOCALE` setting (`he` default, `en`).** Messages the code composes itself (confirmations, reminders, calendar/email alerts, package
   updates, daily summaries, the "what can you do" list, the privacy text, the welcome message, the Google-connected page, weather and

@@ -3,6 +3,8 @@
 [![Tests](https://github.com/marikbrest/pika-personal-whatsapp-bot/actions/workflows/tests.yml/badge.svg)](https://github.com/marikbrest/pika-personal-whatsapp-bot/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
+> **Looking for Telegram?** The Telegram edition lives in its own repository: [pika-telegram-bot](https://github.com/marikbrest/pika-telegram-bot).
+
 Pika is a self-hosted assistant for you and your family that lives entirely inside
 WhatsApp. Message it (text or voice; Hebrew-first, understands English) and it handles reminders, Google
 Calendar, Gmail, weather and market prices — and, if you opt in, it watches your calendar
