@@ -8,6 +8,8 @@ All functions require that the user has already connected Google
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from threading import local
+
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -42,11 +44,10 @@ def format_events_for_reply(events: list, timezone_name: str) -> str:
     return "\n".join(lines)
 
 
-# Per-process cache of the service object, to avoid rebuilding it (and opening
-# a new transport/handshake) on every single calendar call. Key: user_id,
-# value: (access_token, service) - rebuilt automatically if the token changed
-# (i.e. after a refresh).
-_service_cache: dict[int, tuple[str, object]] = {}
+# Google discovery services own httplib2 transports, which must not cross
+# thread boundaries. Keep fast same-thread/user/token reuse without sharing
+# an SSL connection between scheduler workers and webhook handlers.
+_service_cache = local()
 
 
 def _get_calendar_service(user_id: int):
@@ -54,12 +55,15 @@ def _get_calendar_service(user_id: int):
     if credentials is None:
         raise NotConnectedError(f"user_id={user_id} has not connected Google yet")
 
-    cached = _service_cache.get(user_id)
+    cache = getattr(_service_cache, "services", None)
+    if cache is None:
+        cache = _service_cache.services = {}
+    cached = cache.get(user_id)
     if cached is not None and cached[0] == credentials.token:
         return cached[1]
 
     service = build("calendar", "v3", credentials=credentials)
-    _service_cache[user_id] = (credentials.token, service)
+    cache[user_id] = (credentials.token, service)
     return service
 
 

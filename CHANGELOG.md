@@ -4,6 +4,13 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Fixed
+- Google Calendar, Gmail and Drive now keep API services and their HTTP transports
+  separate for each worker thread. Concurrent scheduler and message-handler calls
+  no longer reuse one non-thread-safe connection. Same-thread caching and rebuilds
+  after an access-token change are retained. Regression tests cover thread isolation,
+  user separation and disconnected accounts.
+
 ### Note
 - A Telegram edition now exists as a separate repository, [pika-telegram-bot](https://github.com/marikbrest/pika-telegram-bot) (split off from this code; WhatsApp is not part of it).
 
