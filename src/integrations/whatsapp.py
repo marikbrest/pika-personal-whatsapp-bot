@@ -108,7 +108,7 @@ def _post_message(payload: dict) -> tuple[bool, dict | None]:
     return False, error_json
 
 
-def send_text_message(to: str, body: str) -> bool:
+def send_text_message(to: str, body: str, *, reply_to_message_id: str | None = None) -> bool:
     """
     Sends a free-form text message through the WhatsApp Cloud API.
     Retries with exponential backoff on rate limits (429), server errors (5xx)
@@ -122,6 +122,8 @@ def send_text_message(to: str, body: str) -> bool:
         "type": "text",
         "text": {"body": body},
     }
+    if reply_to_message_id:
+        payload["context"] = {"message_id": reply_to_message_id}
     success, _ = _post_message(payload)
     return success
 

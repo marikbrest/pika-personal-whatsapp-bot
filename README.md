@@ -588,3 +588,16 @@ This address is for questions about the project; the privacy contact for a runni
 ## License
 
 MIT — see [LICENSE](./LICENSE).
+
+### Readable recordings and summaries
+
+Forward a voice recording from another chat to get its full readable transcript and
+separate summary. For a direct recording, send `transcribe`, `/transcribe`, `תמלל`
+or `תמלול`, then send one voice recording within ten minutes. Cancel with
+`cancel transcription`, `/transcribe cancel` or `בטל תמלול`.
+
+The bot acknowledges the recording before processing and replies quoting it.
+Spoken instructions in this path are text only: they cannot create reminders,
+change calendars or send email. Ordinary direct voice commands continue to work.
+See [recording transcription](docs/VOICE_TRANSCRIPTION.md) for limits, providers,
+privacy, cancellation and operator settings.

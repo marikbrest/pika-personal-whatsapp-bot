@@ -8,8 +8,8 @@ and calendar. This is what the software actually does, so you can tell your user
 
 | Data | Sent to | When |
 | --- | --- | --- |
-| The user's message, the last ≤10 messages from the past 24h, saved contact names, saved facts | Google Gemini API (or **OpenAI**, for users who chose it and only if you enabled it) | every message |
-| Photos, voice notes, PDFs the user sends | Meta (download) → Gemini | when sent |
+| The user's message, the last ≤10 messages from the past 24h, saved contact names, saved facts | Google Gemini API (or **OpenAI**, for users who chose it and only if you enabled it) | ordinary conversation messages |
+| Photos, voice notes, PDFs the user sends | Meta (download) → selected AI provider; see recording transcription below | when sent |
 | Message text | Gemini embeddings API | stored for semantic search ("what did we say about X") |
 | Email subjects/bodies, calendar events | Gemini | only when the user asks about mail/calendar |
 | **Proactive mode only:** new-email sender + subject + Gmail's short snippet; upcoming calendar events | Gemini | opt-in, per user, polled in the background; detection and wording only |
@@ -19,8 +19,8 @@ and calendar. This is what the software actually does, so you can tell your user
 | Ticker symbols | Yahoo Finance | quotes |
 | Reminder/alert text | Meta WhatsApp Cloud API | every outbound message |
 
-If you enable OpenAI (`OPENAI_API_KEY` + `OPENAI_MODEL`), those users' content goes to OpenAI instead, with `store: false` (a request, not a
-guarantee); embeddings and image generation still use Gemini. The `/privacy` page and the welcome message name OpenAI automatically.
+If you enable OpenAI (`OPENAI_API_KEY` + `OPENAI_MODEL`), those users' content goes to OpenAI instead. Text-generation requests
+use `store: false` (a request, not a guarantee); Audio transcription has no such parameter. Embeddings and image generation still use Gemini. The `/privacy` page and the welcome message name OpenAI automatically.
 Check OpenAI's own data-use terms for the account your key belongs to.
 
 Google states API data is not used to train its models on paid/billing-enabled projects, but that is
@@ -66,3 +66,21 @@ confirmation step.
 3. Decide how long you keep backups, and delete a leaver's data (`delete_history` + remove the user).
 4. If you are subject to GDPR or similar, this is a family/personal-use tool by design; running it
    for the public is a different compliance problem this project does not solve.
+
+## Recording transcription
+
+Forwarded recordings and explicitly armed direct recordings use a read-only path.
+Meta supplies the recording; the selected Gemini provider receives audio only with
+transcription instructions, without chat history, contacts or tool definitions.
+For OpenAI, audio goes to the Audio transcription API, then the literal transcript
+goes to the configured Responses model for punctuation and summary. Only the
+Responses call sends `store=false`; the Audio endpoint has no such parameter.
+There is no silent fallback between providers. Provider storage/data-use terms still
+apply; app-level in-memory processing is not a promise of provider zero retention.
+
+The app does not save audio files. Literal text, readable replies and summaries are
+stored in the ordinary message history and removed by history/account deletion.
+Pending one-shot state stores only user ID and expiry; it expires in ten minutes,
+and is removed on consumption, cancellation, history deletion or account deletion.
+Failure/timing diagnostics contain fixed reason codes and durations, not speech,
+model responses or provider exception details. Transcription accuracy is not guaranteed.

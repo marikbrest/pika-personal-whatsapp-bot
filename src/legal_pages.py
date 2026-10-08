@@ -10,7 +10,7 @@ from html import escape
 from src import config
 from src.config import ADMIN_CONTACT_EMAIL, OPERATOR_NAME
 
-LEGAL_PAGES_UPDATED = "2026-10-03"
+LEGAL_PAGES_UPDATED = "2026-10-08"
 
 _PAGE_HEAD = """<!DOCTYPE html>
 <html lang="en">
@@ -68,14 +68,21 @@ and pay for the service.</li>
 </ul>
 <p>You do not have to provide any of this; without it, the related feature simply will not work.</p>
 
+<h2>Recording transcription</h2>
+<p>Forwarded recordings, or one direct recording after you request transcription, are treated as content,
+not commands. The recording goes to your selected AI provider without your conversation history or contacts.
+The app keeps audio in memory during processing; provider retention follows its own terms. The literal transcript,
+readable reply and summary are stored in your conversation history until you delete it. A pending transcription
+request expires after ten minutes and is removed when used or cancelled, on history deletion, or on account deletion.
+Transcription can contain mistakes; it does not guarantee that every spoken word is recognized correctly.</p>
 <h2>Who receives it</h2>
 <ul>
 <li><b>Google (Gemini API)</b> processes your messages, the recent conversation, your saved contact names
 and facts, attachments you send, and - only when you ask, or in the background if you enable proactive
 mode (off by default) - email and calendar content. Web searches also go through Google Search.</li>
 {('<li><b>OpenAI</b>, if you choose it (say "switch to OpenAI"; it is off by default for you), receives the same kinds of content '
-'instead of Gemini for your conversations and your proactive alerts. Requests are sent with <code>store=false</code>, which is a request not to '
-'keep them, not a guarantee. Memory search and image generation always use Gemini. You can switch back at any time.</li>') if _openai_enabled() else ""}
+'instead of Gemini for your conversations and your proactive alerts. Text-generation requests are sent with <code>store=false</code>, which is a request not to '
+'keep them, not a guarantee. Audio transcription uses the Audio API, which has no <code>store</code> parameter. Memory search and image generation always use Gemini. You can switch back at any time.</li>') if _openai_enabled() else ""}
 <li><b>Meta (WhatsApp Cloud API)</b> carries every message between you and the assistant.</li>
 <li><b>Other providers</b> receive only the minimum for a lookup you request: Ship24 (tracking numbers),
 Open-Meteo (city names, for weather), Yahoo Finance (ticker symbols).</li>
@@ -157,8 +164,8 @@ the parent or guardian may exercise the rights above on the child's behalf.</p>
 שמורים, קבצים שצירפתם, ו - רק כשאתם מבקשים, או ברקע אם הפעלתם מצב יזום (כבוי כברירת מחדל) - תוכן
 של מיילים ויומן. חיפושים ברשת עוברים גם דרך Google Search.</li>
 {('<li><b>OpenAI</b>, אם תבחרו בו (כותבים "עבור ל-OpenAI"; כברירת מחדל הוא כבוי אצלכם), מקבל את אותם סוגי תוכן במקום Gemini '
-'עבור השיחות שלכם וההתראות היזומות. הבקשות נשלחות עם <code>store=false</code>, שהוא בקשה לא לשמור אותן ולא הבטחה. '
-'חיפוש בזיכרון ויצירת תמונות תמיד משתמשים ב-Gemini. אפשר לחזור ל-Gemini בכל עת.</li>') if _openai_enabled() else ""}
+'עבור השיחות שלכם וההתראות היזומות. בקשות יצירת טקסט נשלחות עם <code>store=false</code>, שהוא בקשה לא לשמור אותן ולא הבטחה. '
+'תמלול שמע משתמש ב-Audio API, ללא פרמטר <code>store</code>. חיפוש בזיכרון ויצירת תמונות תמיד משתמשים ב-Gemini. אפשר לחזור ל-Gemini בכל עת.</li>') if _openai_enabled() else ""}
 <li><b>מטא (WhatsApp Cloud API)</b> מעבירה כל הודעה בינכם לבין העוזר.</li>
 <li><b>ספקים נוספים</b> מקבלים רק את המינימום לבדיקה שביקשתם: Ship24 (מספרי מעקב), Open-Meteo
 (שמות ערים, למזג אוויר), Yahoo Finance (סימולי מניות).</li>
@@ -185,6 +192,12 @@ the parent or guardian may exercise the rights above on the child's behalf.</p>
 במידע שלכם, המפעיל יודיע לכם.</li>
 </ul>
 
+<h2>תמלול הקלטות</h2>
+<p>הקלטות שהועברו, או הקלטה ישירה אחת אחרי בקשת תמלול, מטופלות כתוכן ולא כפקודות.
+ההקלטה נשלחת לספק ה-AI שבחרתם ללא היסטוריית שיחה או אנשי קשר. האפליקציה מחזיקה את השמע בזיכרון
+בזמן העיבוד; שמירתו אצל הספק כפופה לתנאיו. התמלול, התשובה הקריאה והסיכום נשמרים בהיסטוריית השיחה
+עד למחיקתה. בקשת תמלול ממתינה פגה אחרי עשר דקות ומוסרת בשימוש או בביטול, במחיקת היסטוריה או במחיקת החשבון.
+תמלול עשוי להכיל טעויות; אין הבטחה שכל מילה שנאמרה תזוהה נכון.</p>
 <h2>כמה זמן המידע נשמר</h2>
 <p>היסטוריית השיחות, אנשי הקשר והעובדות השמורות נשמרים עד שתמחקו אותם, או עד שתפסיקו להשתמש בעוזר
 ותבקשו מחיקה. רישומי הרקע של ההתראות היזומות נמחקים אוטומטית אחרי 60 יום. גיבויים עשויים לשמור עותק

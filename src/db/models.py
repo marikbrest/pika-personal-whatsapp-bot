@@ -43,6 +43,8 @@ def init_db() -> None:
             conn.executescript(f.read())
         conn.commit()
         _run_migrations(conn)
+        from src.transcription import initialize
+        initialize(conn)
     finally:
         conn.close()
 
@@ -822,6 +824,7 @@ def delete_all_messages_for_user(user_id: int) -> int:
     conn = get_connection()
     try:
         cur = conn.execute("DELETE FROM messages WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM transcription_requests WHERE user_id = ?", (user_id,))
         conn.commit()
         return cur.rowcount
     finally:

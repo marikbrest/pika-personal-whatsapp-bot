@@ -8,7 +8,8 @@ How it works
 - A user's choice is stored in `ai_preferences`; `AI_DEFAULT_PROVIDER` applies until they choose.
 - The provider for the current request is held in a ContextVar, set around message handling (`use_user`) and around
   per-user background jobs, so two users handled at the same time can never see each other's provider.
-- The four LLM entry points (`call_gemini_json`, `call_gemini_json_with_media`, `search_web`, `classify_with_tools`) check
+- The LLM entry points (`call_gemini_json`, `call_gemini_json_with_media`, `search_web`, `classify_with_tools`,
+  and dedicated `call_transcription_json`) check
   `current_provider()` and hand over to that provider's adapter module. Domain tools, confirmations and permission rules
   run in the same dispatcher for every provider; an adapter only turns text/media into JSON or one tool call.
 - No silent failover: if the chosen provider is down or unconfigured the user is told, and nothing is sent to the other one.

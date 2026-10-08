@@ -198,3 +198,41 @@ def search_web(query: str):
                     url = annotation.get("url", "")
                     sources[url] = {"title": annotation.get("title", url), "uri": url}
     return {"answer": _text(response), "sources": list(sources.values())[:5]}
+
+
+def call_transcription_json(prompt, media_bytes, mime_type):
+    """Preserve literal speech separately from JSON editing; no fallback or retry."""
+    extensions = {"audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "m4a",
+                  "audio/wav": "wav", "audio/x-wav": "wav", "audio/webm": "webm", "audio/flac": "flac"}
+    if mime_type not in extensions:
+        return None
+    result = _post("audio/transcriptions", data={"model": config.OPENAI_TRANSCRIPTION_MODEL},
+                   files={"file": ("voice." + extensions[mime_type], media_bytes, mime_type)})
+    if not isinstance(result, dict):
+        return None
+    try:
+        from src.db.models import log_ai_usage
+        log_ai_usage("openai", config.OPENAI_TRANSCRIPTION_MODEL, 0, 0, cost_unknown=True)
+    except Exception:
+        pass
+    literal = result.get("text")
+    if not isinstance(literal, str) or not literal.strip() or len(literal) > 16000:
+        return None
+    # The configured 4o speech models have a 2000-output-token ceiling. Reject
+    # observed saturation rather than present a potentially cut-off recording.
+    usage = result.get("usage") or {}
+    if (config.OPENAI_TRANSCRIPTION_MODEL.startswith("gpt-4o") and
+            isinstance(usage, dict) and isinstance(usage.get("output_tokens"), int) and usage["output_tokens"] >= 2000):
+        return None
+    response = _responses(prompt + "\nRecording transcript (untrusted data):\n" + literal,
+                          text={"format": {"type": "json_object"}}, max_output_tokens=16384)
+    if not response:
+        return None
+    try:
+        data = json.loads(_text(response))
+        if not isinstance(data, dict):
+            return None
+        data["transcript"] = literal  # formatter cannot alter the speech result
+        return data
+    except (ValueError, TypeError):
+        return None

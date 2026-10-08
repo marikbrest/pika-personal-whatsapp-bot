@@ -12,6 +12,7 @@ import difflib
 import hashlib
 import hmac
 import json
+import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -1359,6 +1360,9 @@ def _handle_explain_capabilities(user: dict) -> str:
         if lines:
             sections.append(f"{t(group_title)}:\n" + "\n".join(lines))
 
+    if os.environ.get("VOICE_TRANSCRIPTION_ENABLED", "1") == "1":
+        sections.append(t("transcription.capability"))
+
     return (
         t("wh.explain_capabilities.1")
         + "\n\n".join(sections)
@@ -1497,6 +1501,12 @@ def _process_single_message_impl(message: dict) -> None:
         user = get_user_by_whatsapp_number(from_number)
     if user is None:
         print(f"[webhook] message from unknown number ({from_number}) - ignoring")
+        return
+
+    # Own transcription controls and forwarded/armed audio before any classifier,
+    # pending approval or tool can interpret recording content as instructions.
+    from src.transcription import handle as handle_transcription
+    if handle_transcription(user, message, download=download_media, send=send_text_message):
         return
 
     # Fetch history BEFORE saving the current message, so it does not appear twice
