@@ -4,6 +4,8 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-08
+
 ### Added
 - Complete recording transcription, readable punctuation and a separate short summary
   for forwarded voice recordings or one recording explicitly armed for ten minutes.
