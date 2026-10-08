@@ -88,6 +88,10 @@ def check_required_env() -> None:
     else:
         check(OK, "ADMIN_HOST", v)
 
+    transcription = os.environ.get("VOICE_TRANSCRIPTION_ENABLED", "1")
+    check(OK if transcription in {"0", "1"} else FAIL, "VOICE_TRANSCRIPTION_ENABLED",
+          "enabled" if transcription == "1" else "disabled" if transcription == "0" else "must be 0 or 1")
+
     # These two are printed on the public /privacy and /terms pages. Anyone you invite sees the placeholder
     # otherwise, so this is a WARN for a private test and effectively a must-fix before inviting people.
     for name, why in (("OPERATOR_NAME", "named as the person responsible on /privacy and /terms"),

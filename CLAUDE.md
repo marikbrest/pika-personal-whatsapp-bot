@@ -72,9 +72,10 @@ CI runs all three on Python 3.12/3.13/3.14 plus a Docker smoke test and CodeQL. 
   the tool to `_CAPABILITY_GROUPS` in `webhook_handler.py` or "what can you do?" silently omits it (a test guards this).
 - The tools pipeline runs the tool itself and marks its envelope `tool_executed=True`; the legacy action dispatch in the pipeline
   must never run a tool a second time. Keep it that way if you touch `_classify_text_with_cutover` or the dispatch.
+- `src/transcription.py` owns forwarded/explicitly armed voice recordings before classification. This is a deterministic read-only path, not a model-callable tool: never route its content to actions or approvals. See `docs/VOICE_TRANSCRIPTION.md`; messages use the existing locale catalogs.
 - `src/intent_parser.py` is the older single-call classifier, kept only as a fallback when the tools call fails.
-- **AI providers** (`src/ai.py`): Gemini is the default, OpenAI optional (`OPENAI_API_KEY` + `OPENAI_MODEL`), chosen per user. The four LLM
-  entry points hand over to the current provider's adapter via a ContextVar. Any new background job that calls the LLM *for a user* must run
+- **AI providers** (`src/ai.py`): Gemini is the default, OpenAI optional (`OPENAI_API_KEY` + `OPENAI_MODEL`), chosen per user. The LLM
+  entry points, including dedicated recording transcription, hand over to the current provider's adapter via a ContextVar. Any new background job that calls the LLM *for a user* must run
   under `with use_user(user):` (or `@for_user`), and a new provider must follow [docs/ADDING_A_PROVIDER.md](./docs/ADDING_A_PROVIDER.md) -
   including naming it on `/privacy`. No silent failover between providers, ever.
 

@@ -4,6 +4,16 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Added
+- Complete recording transcription, readable punctuation and a separate short summary
+  for forwarded voice recordings or one recording explicitly armed for ten minutes.
+  Progress feedback precedes processing; quoted/chunked replies keep long transcripts
+  readable. Gemini and optional OpenAI follow the sender's provider selection.
+  Hebrew/English messages, setup/privacy documentation, bounded read-only adapters,
+  user-scoped pending state and regression tests are included. Ordinary direct voice
+  commands keep their existing route. `VOICE_TRANSCRIPTION_ENABLED=0` disables this
+  path without converting forwarded/armed recording content into commands.
+
 ## [0.5.0] - 2026-10-08
 
 ### Fixed

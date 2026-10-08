@@ -523,4 +523,17 @@ MESSAGES = {
     "welcome.operator_suffix": " of {operator}",
     "welcome.openai_note": " (or to OpenAI, if you choose it)",
     "welcome.message": "👋 You were added to the personal assistant{who}.\nWhat's worth knowing about your data: your messages are sent to Google's Gemini{openai_note} and pass through Meta's WhatsApp, and whoever runs the bot can technically read them.\nPrivacy policy: {privacy_url}\nTerms of use: {terms_url}\nYou can write to me any time \"show me what you have on me\" or \"delete my history\".",
+
+    # Standalone read-only recording transcription.
+    'transcription.processing': '🎙️ Recording received. Preparing a readable transcript and summary… This may take a little time.',
+    'transcription.armed': 'Send one recording now for readable text and a summary, without executing its instructions. This request expires in 10 minutes. Cancel: cancel transcription.',
+    'transcription.cancelled': 'Transcription request cancelled. Direct recordings return to the normal voice-command flow.',
+    'transcription.expired': 'Your transcription request expired. Send transcribe, then send the recording again. No instructions from this recording were executed.',
+    'transcription.invalid': 'Transcription supports audio files up to 16 MB. This file is unsupported or too large. Send transcribe before another direct recording.',
+    'transcription.failed': 'I could not transcribe this recording. No instructions in it were executed. Send transcribe, then send it again.',
+    'transcription.disabled': 'Transcription is disabled. No recording instructions were executed. Ordinary direct voice commands still work normally.',
+    'transcription.title': '📝 Transcript',
+    'transcription.summary': 'Short summary',
+    'transcription.no_summary': 'A valid summary was not returned.',
+    "transcription.capability": '🎙️ Recording transcription: forward a recording, or send transcribe then one recording. Get a transcript and summary without executing instructions.',
 }

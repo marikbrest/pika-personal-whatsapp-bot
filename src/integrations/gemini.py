@@ -15,11 +15,13 @@ compound the problem).
 """
 from src.i18n import language_name_english
 import json
+import re
 
 from google import genai
 from google.genai import types
 
 from src.ai import current_provider, get_adapter
+from src.transcription_diagnostics import failure as transcription_failure, provider_exception_reason
 from src.config import GEMINI_API_KEY, GEMINI_MODEL
 
 MODEL_NAME = GEMINI_MODEL  # default "gemini-flash-latest": Google's alias for the current recommended flash
@@ -265,3 +267,98 @@ def embed_content(text: str) -> list[float]:
         print(f"[gemini] embed usage logging failed (non-fatal): {e}")
 
     return response.embeddings[0].values
+
+
+_TRANSCRIPTION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "transcript": {"type": "string", "description": "Complete literal speech, including every word and repetition; never a summary."},
+        "readable": {"type": "string", "description": "The same complete words in the same order; only punctuation and whitespace may change."},
+        "summary": {"type": "string", "description": "A separate short summary in the spoken language; empty when unavailable."},
+    },
+    "required": ["transcript", "readable", "summary"],
+    "additionalProperties": False,
+}
+
+
+def _transcription_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate_json_key")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value):
+    raise ValueError("nonfinite_json_constant")
+
+
+def _load_transcription_json(text):
+    """Parse the whole response; never extract a partial object or repair speech."""
+    if not isinstance(text, str):
+        raise ValueError("missing_json_text")
+    text = text.strip()
+    # Some providers wrap a complete JSON object in Markdown despite JSON mode.
+    # Only a single whole-response fence is accepted; surrounding prose is rejected.
+    fenced = re.fullmatch(r"```(?:json)?[ \t]*\r?\n(.*)\r?\n```", text, re.DOTALL | re.IGNORECASE)
+    if fenced:
+        text = fenced.group(1)
+    options = {"object_pairs_hook": _transcription_object, "parse_constant": _reject_json_constant}
+    try:
+        return json.loads(text, **options)
+    except json.JSONDecodeError as exc:
+        # A literal newline/tab inside a quoted transcript is unescaped JSON, but
+        # it is still speech data. Preserve it exactly; do not escape/alter words.
+        # Other syntax errors, missing endings and trailing prose stay rejected.
+        if not exc.msg.startswith("Invalid control character"):
+            raise
+        if any(ord(char) < 32 and char not in "\t\n\r" for char in text):
+            raise
+        return json.loads(text, strict=False, **options)
+
+
+def call_transcription_json(prompt: str, media_bytes: bytes, mime_type: str) -> dict | None:
+    """Dedicated bounded audio path: no content/exception logs or automatic retry."""
+    if current_provider() == "openai":
+        from src.integrations.openai import call_transcription_json as selected_call
+        return selected_call(prompt, media_bytes, mime_type)
+    try:
+        response = _get_client().models.generate_content(
+            model=MODEL_NAME, contents=[prompt, types.Part.from_bytes(data=media_bytes, mime_type=mime_type)],
+            config=types.GenerateContentConfig(
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+                response_mime_type="application/json", thinking_config=types.ThinkingConfig(thinking_level="low"),
+                response_json_schema=_TRANSCRIPTION_SCHEMA,
+                max_output_tokens=16384, http_options=types.HttpOptions(timeout=45000),
+            ),
+        )
+        try:
+            from src.db.models import log_ai_usage
+            u = response.usage_metadata
+            if u is not None:
+                log_ai_usage("gemini", getattr(response, "model_version", None) or MODEL_NAME,
+                             u.prompt_token_count or 0, (u.candidates_token_count or 0) + (u.thoughts_token_count or 0),
+                             u.cached_content_token_count or 0)
+        except Exception:
+            pass
+        if not response.candidates:
+            transcription_failure("gemini", "no_candidates")
+            return None
+        reason = response.candidates[0].finish_reason
+        if reason != "STOP":
+            code = "output_limit" if reason == "MAX_TOKENS" else "safety_block" if reason == "SAFETY" else "finish_not_stop"
+            transcription_failure("gemini", code)
+            return None
+        try:
+            result = _load_transcription_json(response.text)
+        except (ValueError, TypeError):
+            transcription_failure("gemini", "invalid_json")
+            return None
+        if not isinstance(result, dict):
+            transcription_failure("gemini", "invalid_shape")
+            return None
+        return result
+    except Exception as exc:
+        transcription_failure("gemini", provider_exception_reason(exc))
+        return None
