@@ -4,6 +4,8 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-08
+
 ### Fixed
 - Google Calendar, Gmail and Drive now keep API services and their HTTP transports
   separate for each worker thread. Concurrent scheduler and message-handler calls
@@ -15,6 +17,9 @@ All notable changes to this project. Format follows [Keep a Changelog](https://k
 - A Telegram edition now exists as a separate repository, [pika-telegram-bot](https://github.com/marikbrest/pika-telegram-bot) (split off from this code; WhatsApp is not part of it).
 
 ### Added
+- **Linux deployment recipes:** a systemd service, Caddy configuration, optional
+  Docker Compose setup with Caddy, and a deployment guide in `docs/DEPLOY.md`.
+  ([#20](https://github.com/marikbrest/pika-personal-whatsapp-bot/pull/20))
 - **`LOCALE` setting (`he` default, `en`).** Messages the code composes itself (confirmations, reminders, calendar/email alerts, package
   updates, daily summaries, the "what can you do" list, the privacy text, the welcome message, the Google-connected page, weather and
   integration status lines) now come from catalogs in `src/locales/` through `t()` (`src/i18n.py`). Hebrew output is unchanged. Prompts that
