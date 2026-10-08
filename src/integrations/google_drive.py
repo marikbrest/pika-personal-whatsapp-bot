@@ -10,14 +10,18 @@ Google's own enforcement of that scope, not just by this code's discipline).
 All functions require that the user has already connected Google
 (src.integrations.google_oauth).
 """
+from threading import local
+
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaInMemoryUpload
 
 from src.integrations.google_oauth import GoogleAuthExpiredError, NotConnectedError, get_credentials, is_genuine_auth_rejection
 
-# Per-process cache of the service object - same pattern as gmail.py/google_calendar.py
-_service_cache: dict[int, tuple[str, object]] = {}
+# Google discovery services own httplib2 transports, which must not cross
+# thread boundaries. Keep fast same-thread/user/token reuse without sharing
+# an SSL connection between scheduler workers and webhook handlers.
+_service_cache = local()
 
 
 def _get_drive_service(user_id: int):
@@ -25,12 +29,15 @@ def _get_drive_service(user_id: int):
     if credentials is None:
         raise NotConnectedError(f"user_id={user_id} has not connected Google yet")
 
-    cached = _service_cache.get(user_id)
+    cache = getattr(_service_cache, "services", None)
+    if cache is None:
+        cache = _service_cache.services = {}
+    cached = cache.get(user_id)
     if cached is not None and cached[0] == credentials.token:
         return cached[1]
 
     service = build("drive", "v3", credentials=credentials)
-    _service_cache[user_id] = (credentials.token, service)
+    cache[user_id] = (credentials.token, service)
     return service
 
 
