@@ -21,7 +21,7 @@ google-cloud-bigquery==3.45.2
 apscheduler==3.11.3
 
 # Env vars
-python-dotenv==1.2.3
+python-dotenv==1.2.4
 
 # Encryption (oauth tokens at rest - PRD 12.4)
 # Verifying Cloudflare Access JWTs for the admin dashboard
