@@ -30,4 +30,4 @@ cryptography==50.0.2
 python-multipart==0.0.32
 
 # Content extraction (saved links)
-trafilatura==2.2.0
+trafilatura==2.3.0
