@@ -7,7 +7,7 @@ httpx==0.28.1
 google-genai==2.25.0
 
 # Google APIs (Calendar, Gmail)
-google-auth==2.59.0
+google-auth==2.60.0
 google-auth-oauthlib==1.2.1
 google-api-python-client==2.147.0
 
