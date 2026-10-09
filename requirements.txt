@@ -8,7 +8,7 @@ google-genai==2.25.0
 
 # Google APIs (Calendar, Gmail)
 google-auth==2.59.0
-google-auth-oauthlib==1.2.1
+google-auth-oauthlib==1.5.0
 google-api-python-client==2.147.0
 
 # Real Google Cloud billing costs, via the BigQuery billing export (2026-09-14)
